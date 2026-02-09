@@ -41,7 +41,7 @@ export function Sidebar({ className = "", children, ...props }) {
 
   return (
     <aside
-      className={`border-r border-gray-300/60 bg-gray-50   dark:bg-zinc-800 text-sidebar-foreground flex-none overflow-hidden transition-[width] duration-200 ${
+      className={`border-r border-border/60 bg-sidebar text-sidebar-foreground flex-none overflow-hidden transition-[width] duration-200 ${
         open ? "w-64" : "w-0"
       } ${className}`}
       {...props}

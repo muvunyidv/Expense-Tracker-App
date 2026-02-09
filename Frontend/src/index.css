@@ -1,17 +1,18 @@
 @import "tailwindcss";
 
 @theme {
+  /* Light theme – keep clean minimal look */
   --color-background: 0 0% 100%;
-  --color-foreground: 222.2 47.4% 11.2%;
-  --color-muted: 210 40% 96.1%;
-  --color-muted-foreground: 215.4 16.3% 46.9%;
-  --color-border: 0 0% 90%;
-  --color-primary: 221.2 83.2% 53.3%;
-  --color-primary-foreground: 210 40% 98%;
+  --color-foreground: 222 47% 11%;
+  --color-muted: 210 40% 96%;
+  --color-muted-foreground: 215 16% 47%;
+  --color-border: 0 0% 88%;
+  --color-primary: 142 76% 36%; /* green accent similar to screenshot */
+  --color-primary-foreground: 0 0% 100%;
   --color-card: 0 0% 100%;
-  --color-card-foreground: 222.2 47.4% 11.2%;
-  --color-sidebar: 210 40% 96.1%;
-  --color-sidebar-foreground: 222.2 47.4% 11.2%;
+  --color-card-foreground: 222 47% 11%;
+  --color-sidebar: 210 25% 96%; /* subtle gray sidebar */
+  --color-sidebar-foreground: 222 47% 11%;
 }
 
 @layer base {
@@ -20,18 +21,19 @@
   }
 
   .dark {
+    /* Dark dashboard palette similar to the reference image */
     color-scheme: dark;
-    --color-background: 222.2 84% 4.9%;
-    --color-foreground: 210 40% 98%;
-    --color-muted: 217.2 32.6% 17.5%;
-    --color-muted-foreground: 215 20.2% 65.1%;
-    --color-border: 0 0% 20%;
-    --color-primary: 217.2 91.2% 59.8%;
-    --color-primary-foreground: 222.2 47.4% 11.2%;
-    --color-card: 222.2 84% 4.9%;
-    --color-card-foreground: 210 40% 98%;
-    --color-sidebar: 217.2 32.6% 17.5%;
-    --color-sidebar-foreground: 210 40% 98%;
+    --color-background: 210 28% 7%;        /* page background - near black */
+    --color-foreground: 210 40% 96%;       /* main text */
+    --color-muted: 210 15% 18%;            /* subdued surfaces */
+    --color-muted-foreground: 215 15% 65%; /* secondary text */
+    --color-border: 210 10% 28%;           /* soft borders */
+    --color-primary: 142 72% 45%;          /* green accent */
+    --color-primary-foreground: 0 0% 0%;
+    --color-card: 210 18% 12%;             /* card backgrounds */
+    --color-card-foreground: 210 40% 96%;
+    --color-sidebar: 210 20% 9%;           /* sidebar slightly lighter than bg */
+    --color-sidebar-foreground: 210 25% 90%;
   }
 
   body {
