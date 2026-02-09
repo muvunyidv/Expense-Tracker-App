@@ -6,7 +6,7 @@ import {
   SidebarTrigger,
   SidebarInset,
 } from "./Components/ui/sidebar";
-import { PlusCircle, PanelLeft } from "lucide-react";
+import { LogOut, PlusCircle, PanelLeft } from "lucide-react";
 
 export default function App() {
   return (
@@ -32,8 +32,24 @@ export default function App() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
+                  <div className="relative group">
+                    <button
+                      type="button"
+                      className="p-2 rounded-lg bg-muted hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
+                      aria-label="Log out"
+                      onClick={() => {
+                        // TODO: wire up real logout when auth is added
+                        console.log("Logout clicked");
+                      }}
+                    >
+                      <LogOut className="w-5 h-5" />
+                    </button>
+                    <div className="pointer-events-none absolute right-0 mt-2 w-max rounded-md bg-black/90 px-2 py-1 text-xs text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 dark:bg-white dark:text-black">
+                      Logout
+                    </div>
+                  </div>
                   <ThemeToggle />
-                  <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+                  <button className="flex items-center gap-2 px-4 py-2 rounded-lg filter-toggle-active hover:opacity-90 transition-colors">
                     <PlusCircle className="w-5 h-5" />
                     Add Expense
                   </button>

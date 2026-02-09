@@ -41,3 +41,17 @@
   }
 }
 
+@layer components {
+  /* Active state for expense filter buttons:
+     - Light theme: black background, white text
+     - Dark theme (when .dark is on <html>): white background, black text
+  */
+  .filter-toggle-active {
+    @apply bg-black text-white;
+  }
+
+  .dark .filter-toggle-active {
+    @apply bg-white text-black;
+  }
+}
+

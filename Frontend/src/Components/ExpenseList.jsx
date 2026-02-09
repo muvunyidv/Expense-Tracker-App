@@ -68,7 +68,7 @@ export function ExpenseList() {
               onClick={() => setFilter("daily")}
               className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
                 filter === "daily"
-                  ? "bg-primary text-primary-foreground"
+                  ? "filter-toggle-active"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
@@ -78,7 +78,7 @@ export function ExpenseList() {
               onClick={() => setFilter("weekly")}
               className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
                 filter === "weekly"
-                  ? "bg-primary text-primary-foreground"
+                  ? "filter-toggle-active"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
@@ -88,7 +88,7 @@ export function ExpenseList() {
               onClick={() => setFilter("monthly")}
               className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
                 filter === "monthly"
-                  ? "bg-primary text-primary-foreground"
+                  ? "filter-toggle-active"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >

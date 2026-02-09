@@ -1,19 +1,15 @@
+import { useEffect, useState } from "react";
+import { LayoutDashboard, PlusCircle, Tags } from "lucide-react";
 import {
-    LayoutDashboard,
-    PlusCircle,
-    Tags,
-    ChevronRight,
-  } from "lucide-react";
-  import {
-    Sidebar,
-    SidebarContent,
-    SidebarGroup,
-    SidebarGroupContent,
-    SidebarGroupLabel,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-  } from "./ui/sidebar";
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "./ui/sidebar";
   
   const menuItems = [
     {
@@ -33,29 +29,40 @@ import {
     },
   ];
   
-  export function AppSidebar() {
-    return (
-      <Sidebar>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Expense Tracker</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {menuItems.map((item) => (
+export function AppSidebar() {
+  const [activeHash, setActiveHash] = useState(() => window.location.hash || "#summary");
+
+  useEffect(() => {
+    const onHashChange = () => setActiveHash(window.location.hash || "#summary");
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  return (
+    <Sidebar>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Expense Tracker</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {menuItems.map((item) => {
+                const isActive = activeHash === item.url;
+                return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild active={isActive}>
                       <a href={item.url}>
                         <item.icon className="w-4 h-4" />
                         <span>{item.title}</span>
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-      </Sidebar>
-    );
-  }
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    </Sidebar>
+  );
+}
   

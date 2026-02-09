@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from "react";
+import { cloneElement, createContext, isValidElement, useContext, useState } from "react";
 
 const SidebarContext = createContext({
   open: true,
@@ -88,7 +88,7 @@ export function SidebarGroupContent({ className = "", children, ...props }) {
 
 export function SidebarMenu({ className = "", children, ...props }) {
   return (
-    <nav className={`flex flex-col gap-2 ${className}`} {...props}>
+    <nav className={`flex flex-col gap-4 ${className}`} {...props}>
       {children}
     </nav>
   );
@@ -104,22 +104,40 @@ export function SidebarMenuItem({ className = "", children, ...props }) {
 
 export function SidebarMenuButton({
   asChild = false,
+  active = false,
   className = "",
   children,
   ...props
 }) {
-  const classes = `flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted transition-colors ${className}`;
+  const classes = [
+    "group flex w-full items-center gap-3 rounded-md px-4 py-3 text-base",
+    "transition-all duration-200",
+    "hover:bg-muted/60 hover:translate-x-0.5",
+    "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+    active
+      ? "bg-muted/70 text-sidebar-foreground font-medium ring-1 ring-border/60"
+      : "text-sidebar-foreground/80",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
-  if (asChild && children) {
-    return (
-      <div className={classes} {...props}>
-        {children}
-      </div>
-    );
+  if (asChild && isValidElement(children)) {
+    const childClassName = children.props?.className ?? "";
+    return cloneElement(children, {
+      ...props,
+      className: `${classes} ${childClassName}`.trim(),
+      "aria-current": active ? "page" : undefined,
+    });
   }
 
   return (
-    <button type="button" className={classes} {...props}>
+    <button
+      type="button"
+      className={classes}
+      aria-current={active ? "page" : undefined}
+      {...props}
+    >
       {children}
     </button>
   );
