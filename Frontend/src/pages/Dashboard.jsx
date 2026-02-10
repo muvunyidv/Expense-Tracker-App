@@ -8,7 +8,7 @@ import {
 } from "../Components/ui/sidebar";
 import { LogOut, PlusCircle, PanelLeft } from "lucide-react";
 
-export default function Dashboard() {
+export default function Dashboard({ onLogout }) {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
@@ -38,8 +38,13 @@ export default function Dashboard() {
                       className="p-2 rounded-lg bg-muted hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
                       aria-label="Log out"
                       onClick={() => {
-                        // TODO: wire up real logout when auth is added
-                        console.log("Logout clicked");
+                        // Clear all localStorage and call the parent's logout handler
+                        try {
+                          localStorage.clear();
+                        } catch (e) {
+                          console.error("Failed to clear localStorage", e);
+                        }
+                        if (typeof onLogout === "function") onLogout();
                       }}
                     >
                       <LogOut className="w-5 h-5" />
