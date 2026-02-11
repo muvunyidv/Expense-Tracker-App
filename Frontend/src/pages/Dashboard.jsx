@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { ExpenseList } from "../Components/ExpenseList";
 import { ThemeToggle } from "../Components/ThemeToggle";
 import { AppSidebar } from "../Components/AppSidebar";
+import { AddExpenseForm } from "../Components/AddExpenseForm";
 import {
   SidebarProvider,
   SidebarTrigger,
@@ -9,6 +11,13 @@ import {
 import { LogOut, PlusCircle, PanelLeft } from "lucide-react";
 
 export default function Dashboard({ onLogout }) {
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const handleAddExpense = (expenseData) => {
+    console.log("New expense:", expenseData);
+    // TODO: Send to backend API
+    setIsFormOpen(false);
+  };
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
@@ -54,7 +63,9 @@ export default function Dashboard({ onLogout }) {
                     </div>
                   </div>
                   <ThemeToggle />
-                  <button className="flex items-center gap-2 px-4 py-2 rounded-lg filter-toggle-active hover:opacity-90 transition-colors">
+                  <button 
+                    onClick={() => setIsFormOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg filter-toggle-active hover:opacity-90 transition-colors">
                     <PlusCircle className="w-5 h-5" />
                     Add Expense
                   </button>
@@ -67,6 +78,13 @@ export default function Dashboard({ onLogout }) {
           </div>
         </SidebarInset>
       </div>
+
+      {/* Add Expense Modal */}
+      <AddExpenseForm
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        onSubmit={handleAddExpense}
+      />
     </SidebarProvider>
   );
 }

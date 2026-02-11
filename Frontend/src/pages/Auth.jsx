@@ -53,6 +53,19 @@ function Auth({ onLogin }) {
         </CardHeader>
 
         <CardContent className="space-y-4">
+
+            {isSignup && (
+            <div>
+            <label className="text-sm font-medium text-black">Phone Number</label>
+            <input
+              type="text"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              className="w-full mt-1 px-3 py-2 rounded-lg border bg-white text-black border-gray-300"
+            />
+          </div>
+            )}
+
           <div>
             <label className="text-sm font-medium text-black">Username</label>
             <input
