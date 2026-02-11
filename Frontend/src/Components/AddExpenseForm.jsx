@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 
-const CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   "Food",
   "Transport",
   "Entertainment",
@@ -42,6 +42,7 @@ const styles = `
 `;
 
 export function AddExpenseForm({ isOpen, onClose, onSubmit }) {
+  const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState({
     amount: "",
     category: "Food",
@@ -50,6 +51,24 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit }) {
   });
 
   const [errors, setErrors] = useState({});
+
+  // Load categories from localStorage
+  useEffect(() => {
+    const savedCategories = localStorage.getItem("categories");
+    if (savedCategories) {
+      const loadedCategories = JSON.parse(savedCategories);
+      setCategories(loadedCategories);
+      // Update category to first available if current category is not available
+      if (!loadedCategories.includes(formData.category)) {
+        setFormData((prev) => ({
+          ...prev,
+          category: loadedCategories[0] || "Food",
+        }));
+      }
+    } else {
+      setCategories(DEFAULT_CATEGORIES);
+    }
+  }, [isOpen]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -120,7 +139,7 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit }) {
             className="p-1 hover:bg-muted rounded-md transition-colors"
             aria-label="Close"
           >
-            <X className="w-5 h-5 text-blacks" />
+            <X className="w-5 h-5 text-black" />
           </button>
         </div>
 
@@ -184,7 +203,7 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit }) {
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              {CATEGORIES.map((cat) => (
+              {categories.map((cat) => (
                 <option key={cat} value={cat}>
                   {cat}
                 </option>

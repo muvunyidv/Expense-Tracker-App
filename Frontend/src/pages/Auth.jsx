@@ -4,6 +4,7 @@ import AuthBack from "../assets/Auth-Back.jpg"
 
 function Auth({ onLogin }) {
   const [isSignup, setIsSignup] = useState(false)
+  const [PhoneNumber, setPhoneNumber] = useState("")
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -58,9 +59,9 @@ function Auth({ onLogin }) {
             <div>
             <label className="text-sm font-medium text-black">Phone Number</label>
             <input
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
+              type="number"
+              value={PhoneNumber}
+              onChange={e => setPhoneNumber (e.target.value)}
               className="w-full mt-1 px-3 py-2 rounded-lg border bg-white text-black border-gray-300"
             />
           </div>

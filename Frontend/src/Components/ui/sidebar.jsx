@@ -110,7 +110,7 @@ export function SidebarMenuButton({
   ...props
 }) {
   const classes = [
-    "group flex w-full items-center gap-3 rounded-md px-4 py-3 text-base",
+    "group flex w-full items-center gap-3 rounded-md px-4 py-3 text-xl mt-2",
     "transition-all duration-200",
     "hover:bg-muted/60 hover:translate-x-0.5",
     "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",

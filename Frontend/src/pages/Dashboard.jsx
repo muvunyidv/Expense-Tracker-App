@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ExpenseList } from "../Components/ExpenseList";
 import { ThemeToggle } from "../Components/ThemeToggle";
 import { AppSidebar } from "../Components/AppSidebar";
 import { AddExpenseForm } from "../Components/AddExpenseForm";
+import { Categories } from "./Categories";
 import {
   SidebarProvider,
   SidebarTrigger,
@@ -12,12 +13,42 @@ import { LogOut, PlusCircle, PanelLeft } from "lucide-react";
 
 export default function Dashboard({ onLogout }) {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(() => window.location.hash || "#summary");
+
+  useEffect(() => {
+    const onHashChange = () => setCurrentPage(window.location.hash || "#summary");
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  const getPageTitle = () => {
+    switch (currentPage) {
+      case "#categories":
+        return { title: "Categories", description: "Manage your expense categories" };
+      case "#summary":
+      default:
+        return { title: "Expense Tracker", description: "Track and manage your expenses" };
+    }
+  };
 
   const handleAddExpense = (expenseData) => {
     console.log("New expense:", expenseData);
     // TODO: Send to backend API
     setIsFormOpen(false);
   };
+
+  const renderPageContent = () => {
+    switch (currentPage) {
+      case "#categories":
+        return <Categories />;
+      case "#summary":
+      default:
+        return <ExpenseList />;
+    }
+  };
+
+  const { title, description } = getPageTitle();
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
@@ -33,10 +64,10 @@ export default function Dashboard({ onLogout }) {
                   </SidebarTrigger>
                   <div>
                     <h1 className="text-3xl font-semibold">
-                      Expense Tracker
+                      {title}
                     </h1>
                     <p className="text-muted-foreground mt-1">
-                      Track and manage your expenses
+                      {description}
                     </p>
                   </div>
                 </div>
@@ -63,17 +94,19 @@ export default function Dashboard({ onLogout }) {
                     </div>
                   </div>
                   <ThemeToggle />
-                  <button 
-                    onClick={() => setIsFormOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg filter-toggle-active hover:opacity-90 transition-colors">
-                    <PlusCircle className="w-5 h-5" />
-                    Add Expense
-                  </button>
+                  {currentPage === "#summary" && (
+                    <button 
+                      onClick={() => setIsFormOpen(true)}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg filter-toggle-active hover:opacity-90 transition-colors">
+                      <PlusCircle className="w-5 h-5" />
+                      Add Expense
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Expense List */}
-              <ExpenseList />
+              {/* Page Content */}
+              {renderPageContent()}
             </div>
           </div>
         </SidebarInset>

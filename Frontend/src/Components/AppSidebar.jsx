@@ -21,12 +21,7 @@ import {
       title: "Categories",
       icon: Tags,
       url: "#categories",
-    },
-    {
-      title: "Add New Expense",
-      icon: PlusCircle,
-      url: "#add-expense",
-    },
+    },  
   ];
   
 export function AppSidebar() {
