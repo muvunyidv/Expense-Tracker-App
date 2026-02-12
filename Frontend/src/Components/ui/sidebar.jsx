@@ -112,10 +112,10 @@ export function SidebarMenuButton({
   const classes = [
     "group flex w-full items-center gap-3 rounded-md px-4 py-3 text-xl mt-2",
     "transition-all duration-200",
-    "hover:bg-muted/60 hover:translate-x-0.5",
-    "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+    "hover:bg-muted/60 hover:translate-x-0.5 hover:text-orange-500",
+    "focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40",
     active
-      ? "bg-muted/70 text-sidebar-foreground font-medium ring-1 ring-border/60"
+      ? "bg-muted/70 text-black font-medium ring-1 ring-orange-500/60"
       : "text-sidebar-foreground/80",
     className,
   ]

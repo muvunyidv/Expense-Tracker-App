@@ -13,6 +13,7 @@
   --color-card-foreground: 222 47% 11%;
   --color-sidebar: 210 25% 96%; /* subtle gray sidebar */
   --color-sidebar-foreground: 222 47% 11%;
+  --color-accent: 28 100% 59%; /* orange accent rgb(254, 132, 49) */
 }
 
 @layer base {
@@ -34,6 +35,7 @@
     --color-card-foreground: 210 40% 96%;
     --color-sidebar: 210 20% 9%;           /* sidebar slightly lighter than bg */
     --color-sidebar-foreground: 210 25% 90%;
+    --color-accent: 28 100% 59%; /* orange accent rgb(254, 132, 49) */
   }
 
   body {
@@ -42,16 +44,13 @@
 }
 
 @layer components {
-  /* Active state for expense filter buttons:
-     - Light theme: black background, white text
-     - Dark theme (when .dark is on <html>): white background, black text
-  */
+  /* Active state for expense filter buttons: orange background */
   .filter-toggle-active {
-    @apply bg-black text-white;
+    @apply bg-orange-500 text-white;
   }
 
   .dark .filter-toggle-active {
-    @apply bg-white text-black;
+    @apply bg-orange-500 text-white;
   }
 }
 

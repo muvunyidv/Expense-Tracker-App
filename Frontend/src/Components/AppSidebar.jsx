@@ -37,7 +37,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Expense Tracker</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-black">Expense Tracker</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => {

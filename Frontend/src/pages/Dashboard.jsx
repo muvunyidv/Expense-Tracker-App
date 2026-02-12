@@ -90,10 +90,10 @@ export default function Dashboard({ onLogout }) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <SidebarTrigger>
-                    <PanelLeft className="w-5 h-5" />
+                    <PanelLeft className="w-5 h-5 text-black  " />
                   </SidebarTrigger>
                   <div>
-                    <h1 className="text-3xl font-semibold">
+                    <h1 className="text-3xl font-semibold text-black">
                       {title}
                     </h1>
                     <p className="text-muted-foreground mt-1">
@@ -105,7 +105,7 @@ export default function Dashboard({ onLogout }) {
                   <div className="relative group">
                     <button
                       type="button"
-                      className="p-2 rounded-lg bg-muted hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
+                      className="p-2 rounded-lg bg-muted hover:bg-orange-500 text-orange-500 hover:text-white dark:hover:bg-orange-500 dark:hover:text-black transition-colors"
                       aria-label="Log out"
                       onClick={() => {
                         // Clear all localStorage and call the parent's logout handler
@@ -127,7 +127,7 @@ export default function Dashboard({ onLogout }) {
                   {currentPage === "#summary" && (
                     <button 
                       onClick={() => setIsFormOpen(true)}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg filter-toggle-active hover:opacity-90 transition-colors">
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white hover:opacity-90 transition-colors">
                       <PlusCircle className="w-5 h-5" />
                       Add Expense
                     </button>

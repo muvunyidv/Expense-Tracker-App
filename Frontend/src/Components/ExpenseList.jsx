@@ -5,19 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 const getCategoryIcon = (category) => {
   const categoryLower = category.toLowerCase();
   if (categoryLower.includes("food") || categoryLower.includes("dining")) {
-    return <Utensils className="w-5 h-5" />;
+    return <Utensils className="w-5 h-5 text-orange-500" />;
   } else if (categoryLower.includes("transport") || categoryLower.includes("car")) {
-    return <Car className="w-5 h-5" />;
+    return <Car className="w-5 h-5 text-orange-500" />;
   } else if (categoryLower.includes("entertainment") || categoryLower.includes("coffee")) {
-    return <Coffee className="w-5 h-5" />;
+    return <Coffee className="w-5 h-5 text-orange-500" />;
   } else if (categoryLower.includes("shopping")) {
-    return <ShoppingBag className="w-5 h-5" />;
+    return <ShoppingBag className="w-5 h-5 text-orange-500" />;
   } else if (categoryLower.includes("housing") || categoryLower.includes("utilities")) {
-    return <Home className="w-5 h-5" />;
+    return <Home className="w-5 h-5 text-orange-500" />;
   } else if (categoryLower.includes("healthcare") || categoryLower.includes("phone")) {
-    return <Smartphone className="w-5 h-5" />;
+    return <Smartphone className="w-5 h-5 text-orange-500" />;
   }
-  return <ShoppingBag className="w-5 h-5" />;
+  return <ShoppingBag className="w-5 h-5 text-orange-500" />;
 };
 
 export function ExpenseList() {
@@ -136,7 +136,7 @@ export function ExpenseList() {
                 </div>
                 <button
                   onClick={() => handleEditExpense(expense.id)}
-                  className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                  className="p-2 text-orange-500 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors"
                   aria-label="Edit expense"
                   title="Edit expense"
                 >

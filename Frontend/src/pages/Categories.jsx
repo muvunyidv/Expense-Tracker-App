@@ -70,16 +70,14 @@ export function Categories() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold">Categories</h2>
+          <h2 className="text-2xl font-semibold text-black">Categories</h2>
           <p className="text-muted-foreground mt-1">
             Manage your expense categories
           </p>
         </div>
         <button
           onClick={() => setIsAdding(true)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium hover:opacity-90 transition-colors ${
-            isDark ? 'bg-white text-black' : 'bg-black text-white'
-          }`}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium hover:opacity-90 transition-colors bg-orange-500 text-white"
         >
           <Plus className="w-5 h-5" />
           Add Category

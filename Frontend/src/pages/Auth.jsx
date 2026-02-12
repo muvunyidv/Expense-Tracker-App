@@ -101,7 +101,7 @@ function Auth({ onLogin }) {
 
           <button
             onClick={handleSubmit}
-            className="w-full py-2 rounded-lg bg-black text-white font-medium hover:opacity-90 transition shadow-sm border border-black"
+            className="w-full py-2 rounded-lg bg-orange-500 text-white font-medium hover:bg-orange-600 transition shadow-sm border border-orange-500"
           >
             {isSignup ? "Create Account" : "Login"}
           </button>
@@ -114,7 +114,7 @@ function Auth({ onLogin }) {
                 e.preventDefault();
                 setIsSignup(!isSignup);
               }}
-              className="ml-1 text-blue-600 underline hover:opacity-90"
+              className="ml-1 text-orange-500 underline hover:opacity-90"
             >
               {isSignup ? "Login" : "Sign up"}
             </a>

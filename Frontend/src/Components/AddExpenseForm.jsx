@@ -164,7 +164,7 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit }) {
               value={formData.name}
               onChange={handleChange}
               placeholder="Enter expense name"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-gray-900 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-gray-900 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
             {errors.name && (
               <p className="text-red-500 text-sm mt-1">{errors.name}</p>
@@ -185,7 +185,7 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit }) {
               placeholder="0.00"
               step="0.01"
               min="0"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-gray-900 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-gray-900 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
             {errors.amount && (
               <p className="text-red-500 text-sm mt-1">{errors.amount}</p>
@@ -206,7 +206,7 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit }) {
               value={formData.category}
               onChange={handleChange}
               disabled={categories.length === 0}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-black focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-black focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {categories.length === 0 ? (
                 <option value="">You have no categories yet</option>
@@ -238,7 +238,7 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit }) {
               onChange={handleChange}
               placeholder="Add a description (optional)"
               rows="3"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-gray-900 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-gray-900 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
             />
           </div>
 
@@ -253,7 +253,7 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit }) {
               name="date"
               value={formData.date}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-black dark:text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-black dark:text-black focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
             {errors.date && (
               <p className="text-red-500 text-sm mt-1">{errors.date}</p>
@@ -271,7 +271,7 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit }) {
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 rounded-lg bg-blue-600 text-white dark:bg-blue-600 hover:bg-blue-700 transition-colors font-medium"
+              className="flex-1 px-4 py-2 rounded-lg bg-orange-500 text-white dark:bg-orange-500 hover:bg-orange-600 transition-colors font-medium"
             >
               Add Expense
             </button>

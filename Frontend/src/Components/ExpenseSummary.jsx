@@ -7,7 +7,7 @@ function SummaryCard({ title, icon }) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm text-muted-foreground">{title}</CardTitle>
-          <div className="text-muted-foreground">{icon}</div>
+          <div className="text-orange-500">{icon}</div>
         </div>
       </CardHeader>
     </Card>
