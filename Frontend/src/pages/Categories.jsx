@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Trash2, Plus } from "lucide-react";
+import { AddCategoryForm } from "../Components/AddCategoryForm";
 
 const DEFAULT_CATEGORIES = [
   "Food",
@@ -13,7 +14,6 @@ const DEFAULT_CATEGORIES = [
 
 export function Categories() {
   const [categories, setCategories] = useState([]);
-  const [newCategory, setNewCategory] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState("");
   const [isDark, setIsDark] = useState(false);
@@ -48,21 +48,8 @@ export function Categories() {
     localStorage.setItem("categories", JSON.stringify(categories));
   }, [categories]);
 
-  const handleAddCategory = () => {
-    const trimmedCategory = newCategory.trim();
-
-    if (!trimmedCategory) {
-      setError("Category name cannot be empty");
-      return;
-    }
-
-    if (categories.some((cat) => cat.toLowerCase() === trimmedCategory.toLowerCase())) {
-      setError("This category already exists");
-      return;
-    }
-
-    setCategories([...categories, trimmedCategory]);
-    setNewCategory("");
+  const handleAddCategory = (categoryName) => {
+    setCategories([...categories, categoryName]);
     setIsAdding(false);
     setError("");
   };
@@ -106,47 +93,16 @@ export function Categories() {
         </div>
       )}
 
-      {/* Add Category Form */}
-      {isAdding && (
-        <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 space-y-3">
-          <div>
-            <label htmlFor="categoryInput" className="block text-sm font-medium mb-2 text-white">
-              New Category Name
-            </label>
-            <input
-              id="categoryInput"
-              type="text"
-              value={newCategory}
-              onChange={(e) => {
-                setNewCategory(e.target.value);
-                setError("");
-              }}
-              onKeyPress={(e) => e.key === "Enter" && handleAddCategory()}
-              placeholder="Enter category name"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              autoFocus
-            />
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleAddCategory}
-              className="flex-1 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
-            >
-              Add
-            </button>
-            <button
-              onClick={() => {
-                setIsAdding(false);
-                setNewCategory("");
-                setError("");
-              }}
-              className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors font-medium"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Add Category Modal */}
+      <AddCategoryForm
+        isOpen={isAdding}
+        onClose={() => {
+          setIsAdding(false);
+          setError("");
+        }}
+        onSubmit={handleAddCategory}
+        existingCategories={categories}
+      />
 
       {/* Categories Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

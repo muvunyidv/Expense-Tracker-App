@@ -44,6 +44,7 @@ const styles = `
 export function AddExpenseForm({ isOpen, onClose, onSubmit }) {
   const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState({
+    name: "",
     amount: "",
     category: "Food",
     description: "",
@@ -73,6 +74,10 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit }) {
   const validateForm = () => {
     const newErrors = {};
 
+    if (!formData.name || formData.name.trim() === "") {
+      newErrors.name = "Name is required";
+    }
+
     if (!formData.amount || parseFloat(formData.amount) <= 0) {
       newErrors.amount = "Amount must be greater than 0";
     }
@@ -100,6 +105,7 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit }) {
 
       // Reset form
       setFormData({
+        name: "",
         amount: "",
         category: "Food",
         description: "",
@@ -146,24 +152,22 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit }) {
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
 
-            {/* Name Field */}
+          {/* Name Field */}
           <div>
-            <label htmlFor="amount" className="block text-sm font-medium mb-2 text-black dark:text-black">
-              Name
+            <label htmlFor="name" className="block text-sm font-medium mb-2 text-black dark:text-black">
+              Name *
             </label>
             <input
-              type="number"
-              id="amount"
-              name="amount"
-              value={formData.amount}
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
               onChange={handleChange}
-              placeholder="0.00"
-              step="0.01"
-              min="0"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter expense name"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-gray-900 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            {errors.amount && (
-              <p className="text-red-500 text-sm mt-1">{errors.amount}</p>
+            {errors.name && (
+              <p className="text-red-500 text-sm mt-1">{errors.name}</p>
             )}
           </div>
 
@@ -181,7 +185,7 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit }) {
               placeholder="0.00"
               step="0.01"
               min="0"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-gray-900 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {errors.amount && (
               <p className="text-red-500 text-sm mt-1">{errors.amount}</p>
@@ -229,7 +233,7 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit }) {
               onChange={handleChange}
               placeholder="Add a description (optional)"
               rows="3"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-gray-900 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
           </div>
 

@@ -32,9 +32,39 @@ export default function Dashboard({ onLogout }) {
   };
 
   const handleAddExpense = (expenseData) => {
-    console.log("New expense:", expenseData);
-    // TODO: Send to backend API
-    setIsFormOpen(false);
+    try {
+      // Get existing expenses from localStorage
+      const existingExpenses = localStorage.getItem("expenses");
+      const expenses = existingExpenses ? JSON.parse(existingExpenses) : [];
+      
+      // Format the date
+      const dateObj = new Date(expenseData.date);
+      const formattedDate = dateObj.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+      
+      // Create new expense with ID
+      const newExpense = {
+        ...expenseData,
+        date: formattedDate,
+        id: Date.now().toString(),
+      };
+      
+      // Add to expenses array
+      expenses.push(newExpense);
+      
+      // Save to localStorage
+      localStorage.setItem("expenses", JSON.stringify(expenses));
+      
+      // Trigger a custom event so ExpenseList can refresh
+      window.dispatchEvent(new Event("expensesUpdated"));
+      
+      setIsFormOpen(false);
+    } catch (error) {
+      console.error("Failed to add expense:", error);
+    }
   };
 
   const renderPageContent = () => {
