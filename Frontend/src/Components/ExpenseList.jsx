@@ -132,7 +132,7 @@ export function ExpenseList() {
               </div>
               <div className="flex items-center gap-3">
                 <div className="font-semibold">
-                  -${expense.amount.toFixed(2)}
+                  {expense.amount} FRw
                 </div>
                 <button
                   onClick={() => handleEditExpense(expense.id)}
@@ -158,7 +158,7 @@ export function ExpenseList() {
         <div className="mt-6 pt-4 border-t border-gray-300/60 dark:border-zinc-700/60 flex items-center justify-between">
           <div className="font-semibold">Total</div>
           <div className="text-xl font-semibold">
-            -${total.toFixed(2)}
+            {total} FRw
           </div>
         </div>
       </CardContent>

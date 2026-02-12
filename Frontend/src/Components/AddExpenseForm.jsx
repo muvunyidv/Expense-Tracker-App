@@ -63,11 +63,11 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit }) {
       if (!loadedCategories.includes(formData.category)) {
         setFormData((prev) => ({
           ...prev,
-          category: loadedCategories[0] || "Food",
+          category: loadedCategories[0] || "",
         }));
       }
     } else {
-      setCategories(DEFAULT_CATEGORIES);
+      setCategories([]);
     }
   }, [isOpen]);
 
@@ -205,13 +205,18 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit }) {
               name="category"
               value={formData.category}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={categories.length === 0}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-black focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
+              {categories.length === 0 ? (
+                <option value="">You have no categories yet</option>
+              ) : (
+                categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))
+              )}
             </select>
             {errors.category && (
               <p className="text-red-500 text-sm mt-1">{errors.category}</p>
