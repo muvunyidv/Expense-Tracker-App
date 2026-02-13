@@ -8,26 +8,37 @@ const router = express.Router();
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { phonenumber,username, email, password } = req.body;
+    const { phonenumber, username, email, password } = req.body;
 
     if (!phonenumber || !username || !email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
       return res.status(409).json({ error: 'Email already exists' });
     }
 
-    const user = new User({ phonenumbe,username, email, password });
+    const existingUsername = await User.findOne({ username });
+    if (existingUsername) {
+      return res.status(409).json({ error: 'Username already exists' });
+    }
+
+    const user = new User({ phonenumber, username, email, password });
     await user.save();
-    const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '24h' });
+
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
 
     res.status(201).json({ user: user.toJSON(), token });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 // Login
 router.post('/login', async (req, res) => {

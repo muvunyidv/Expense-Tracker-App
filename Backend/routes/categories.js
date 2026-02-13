@@ -28,7 +28,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 });
 
 // Create category
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { name, description } = req.body;
 
@@ -36,10 +36,19 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Name is required' });
     }
 
-    const category = new Category({ userId: req.user.id, name, description });
+    const category = new Category({
+      userId: req.user.id,
+      name: name.trim(),
+      description
+    });
+
     await category.save();
     res.status(201).json(category);
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({ error: 'Category already exists' });
+    }
+
     res.status(500).json({ error: error.message });
   }
 });
