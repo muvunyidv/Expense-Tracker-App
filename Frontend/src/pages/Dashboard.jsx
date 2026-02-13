@@ -131,33 +131,33 @@ export default function Dashboard({ onLogout }) {
           <div className="min-h-screen bg-background p-6">
             <div className="max-w-7xl mx-auto space-y-6">
               {/* Header */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="hidden">
-                    <SidebarTrigger>
-                      <AlignJustify className="w-5 h-5 text-orange-500" />
-                    </SidebarTrigger>
-                  </span>
-                  <div>
-                    <h1 className="text-3xl font-semibold text-foreground">
-                      {title}
-                    </h1>
-                    <p className="text-muted-foreground mt-1">
-                      {description}
-                    </p>
+              {currentPage !== "#categories" && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="hidden">
+                      <SidebarTrigger />
+                    </span>
+                    <div>
+                      <h1 className="text-3xl font-semibold text-foreground">
+                        {title}
+                      </h1>
+                      <p className="text-muted-foreground mt-1">
+                        {description}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {currentPage === "#summary" && (
+                      <button 
+                        onClick={() => setIsFormOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white hover:opacity-90 transition-colors">
+                        <PlusCircle className="w-5 h-5" />
+                        Add Expense
+                      </button>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  {currentPage === "#summary" && (
-                    <button 
-                      onClick={() => setIsFormOpen(true)}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white hover:opacity-90 transition-colors">
-                      <PlusCircle className="w-5 h-5" />
-                      Add Expense
-                    </button>
-                  )}
-                </div>
-              </div>
+              )}
 
               {/* Page Content */}
               {renderPageContent()}
