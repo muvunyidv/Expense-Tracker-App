@@ -1,4 +1,5 @@
-import { cloneElement, createContext, isValidElement, useContext, useState } from "react";
+import { cloneElement, createContext, isValidElement, useContext, useEffect, useState } from "react";
+import { AlignJustify, X } from "lucide-react";
 
 const SidebarContext = createContext({
   open: true,
@@ -6,9 +7,18 @@ const SidebarContext = createContext({
 });
 
 export function SidebarProvider({ children }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   const toggle = () => setOpen((prev) => !prev);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const sync = () => setOpen(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   return (
     <SidebarContext.Provider value={{ open, toggle }}>
@@ -18,7 +28,7 @@ export function SidebarProvider({ children }) {
 }
 
 export function SidebarTrigger({ className = "", children, ...props }) {
-  const { toggle } = useContext(SidebarContext);
+  const { toggle, open } = useContext(SidebarContext);
 
   return (
     <button
@@ -27,7 +37,12 @@ export function SidebarTrigger({ className = "", children, ...props }) {
       className={`inline-flex h-9 w-9 items-center justify-center rounded-md border bg-background text-foreground hover:bg-muted transition-colors ${className}`}
       {...props}
     >
-      {children ?? <span className="sr-only">Toggle sidebar</span>}
+      {children ??
+        (open ? (
+          <X className="w-5 h-5 text-orange-500" />
+        ) : (
+          <AlignJustify className="w-5 h-5 text-orange-500" />
+        ))}
     </button>
   );
 }
@@ -41,9 +56,7 @@ export function Sidebar({ className = "", children, ...props }) {
 
   return (
     <aside
-      className={`border-r border-border/60 bg-sidebar text-sidebar-foreground flex-none overflow-hidden transition-[width] duration-200 ${
-        open ? "w-64" : "w-0"
-      } ${className}`}
+      className={`bg-sidebar text-sidebar-foreground flex-none overflow-hidden transition-[width] duration-200 shadow ${open ? "w-64" : "w-0"} lg:w-64 ${className}`}
       {...props}
     >
       {children}
@@ -115,7 +128,7 @@ export function SidebarMenuButton({
     "hover:bg-muted/60 hover:translate-x-0.5 hover:text-orange-500",
     "focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40",
     active
-      ? "bg-muted/70 text-black font-medium ring-1 ring-orange-500/60"
+      ? "bg-muted/70 text-foreground font-medium ring-1 ring-orange-500/60"
       : "text-sidebar-foreground/80",
     className,
   ]
@@ -142,4 +155,3 @@ export function SidebarMenuButton({
     </button>
   );
 }
-
