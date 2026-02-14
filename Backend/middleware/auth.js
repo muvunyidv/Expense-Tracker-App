@@ -9,17 +9,19 @@ const authMiddleware = (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    req.user = { id: decoded.id };
+    // Defensive check: ensure the token actually contains an ID
+    if (!decoded.id) {
+      return res.status(401).json({ error: 'Invalid token payload' });
+    }
 
+    req.user = { id: decoded.id };
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ error: 'Token expired' });
     }
-
     return res.status(401).json({ error: 'Invalid token' });
   }
 };

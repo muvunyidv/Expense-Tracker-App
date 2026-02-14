@@ -1,12 +1,15 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+
+// 1. LOAD DOTENV FIRST
+dotenv.config();
+
+// 2. NOW LOAD THE REST
 const connectDB = require('./db');
 const authRoutes = require('./routes/auth');
 const categoriesRoutes = require('./routes/categories');
 const expensesRoutes = require('./routes/expenses');
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;

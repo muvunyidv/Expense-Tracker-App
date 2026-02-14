@@ -8,23 +8,22 @@ const router = express.Router();
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { phonenumber, username, email, password } = req.body;
+    // 1. Removed email from destructuring
+    const { phonenumber, username, password } = req.body;
 
-    if (!phonenumber || !username || !email || !password) {
+    // 2. Updated validation check
+    if (!phonenumber || !username || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    const existingEmail = await User.findOne({ email });
-    if (existingEmail) {
-      return res.status(409).json({ error: 'Email already exists' });
-    }
-
+    // 3. Check for existing username (removed email check)
     const existingUsername = await User.findOne({ username });
     if (existingUsername) {
       return res.status(409).json({ error: 'Username already exists' });
     }
 
-    const user = new User({ phonenumber, username, email, password });
+    // 4. Create user without email
+    const user = new User({ phonenumber, username, password });
     await user.save();
 
     const token = jwt.sign(
@@ -39,17 +38,18 @@ router.post('/register', async (req, res) => {
   }
 });
 
-
 // Login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    // 5. Switch from email to username for login
+    const { username, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    const user = await User.findOne({ email });
+    // 6. Find user by username
+    const user = await User.findOne({ username });
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -59,7 +59,12 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    // 7. Updated JWT payload to use username instead of email
+    const token = jwt.sign(
+      { id: user._id, username: user.username }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: '24h' }
+    );
 
     res.json({ user: user.toJSON(), token });
   } catch (error) {
