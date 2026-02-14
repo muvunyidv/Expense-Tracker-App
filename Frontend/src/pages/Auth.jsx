@@ -5,16 +5,27 @@ import API from "../api";
 
 function Auth({ onLogin }) {
   const [isSignup, setIsSignup] = useState(false);
-  const [formData, setFormData] = useState({
+  
+  // Define initial state to reuse for resetting
+  const initialFormState = {
     username: "",
     email: "",
     password: "",
     confirmPassword: "",
     phonenumber: "", 
-    loginIdentifier: "" // New state for combined Login field
-  });
+    loginIdentifier: ""
+  };
+
+  const [formData, setFormData] = useState(initialFormState);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Function to switch between Login and Signup and CLEAR form
+  const toggleAuthMode = () => {
+    setIsSignup(!isSignup);
+    setError("");
+    setFormData(initialFormState); // This wipes the password and other fields
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -25,7 +36,6 @@ function Auth({ onLogin }) {
     e.preventDefault();
     const { username, email, password, confirmPassword, phonenumber, loginIdentifier } = formData;
 
-    // Validation
     if (isSignup) {
       if (!username || !password || !email || !phonenumber || !confirmPassword) {
         return setError("All fields are required");
@@ -53,8 +63,8 @@ function Auth({ onLogin }) {
 
         alert("Account created successfully! Please login.");
         setIsSignup(false);
+        setFormData(initialFormState); // Reset after successful registration
       } else {
-        // Updated Login: Sends 'identifier' which can be email OR phone
         const res = await API.post("/auth/login", { 
           identifier: loginIdentifier.trim().toLowerCase(), 
           password 
@@ -126,7 +136,15 @@ function Auth({ onLogin }) {
 
               <div>
                 <label className="text-xs font-semibold uppercase text-gray-500">Password</label>
-                <input name="password" type="password" placeholder="••••••••" value={formData.password} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none" />
+                <input 
+                  name="password" 
+                  type="password" 
+                  placeholder="••••••••" 
+                  value={formData.password} 
+                  onChange={handleChange} 
+                  autoComplete={isSignup ? "new-password" : "current-password"}
+                  className="w-full mt-1 px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none" 
+                />
               </div>
 
               {isSignup && (
@@ -138,13 +156,13 @@ function Auth({ onLogin }) {
 
               {error && <div className="mt-2 p-3 rounded bg-red-100 border border-red-200 text-red-600 text-sm font-medium">{error}</div>}
 
-              <button type="submit" disabled={loading} className="w-full mt-2 py-3 rounded-lg bg-orange-500 text-white font-bold hover:bg-orange-600 active:scale-[0.98] transition-all disabled:opacity-50">
+              <button type="submit" disabled={loading} className="w-full mt-2 py-3 rounded-lg bg-orange-500 text-white font-bold hover:bg-orange-600 active:scale-[0.98] transition-all disabled:opacity-50 text-center flex justify-center items-center">
                 {loading ? "Processing..." : isSignup ? "CREATE ACCOUNT" : "LOG IN"}
               </button>
             </form>
 
             <div className="mt-6 text-center">
-              <button onClick={() => { setIsSignup(!isSignup); setError(""); }} className="text-sm text-gray-600 hover:text-orange-500 transition-colors">
+              <button onClick={toggleAuthMode} className="text-sm text-gray-600 hover:text-orange-500 transition-colors">
                 {isSignup ? "Already have an account? " : "Don't have an account? "}
                 <span className="font-bold underline text-orange-500">{isSignup ? "Login" : "Sign up"}</span>
               </button>
