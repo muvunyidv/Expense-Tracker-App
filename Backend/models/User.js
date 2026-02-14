@@ -8,6 +8,14 @@ const userSchema = new mongoose.Schema({
     unique: true, 
     trim: true 
   },
+
+  email: { 
+    type: String, 
+    required: true, 
+    unique: true, 
+    lowercase: true, 
+    trim: true 
+  },
   phonenumber: { 
     type: String, 
     required: true, 
@@ -19,14 +27,12 @@ const userSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// Updated: Removed 'next' argument to fix "next is not a function"
+// Password hashing middleware (Async version)
 userSchema.pre('save', async function () {
-  // If the password isn't modified, we just return to stop execution of this hook
   if (!this.isModified('password')) return;
 
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
-  // No next() call needed here; Mongoose waits for the async function to resolve
 });
 
 // Method to verify password during login

@@ -94,7 +94,7 @@ export default function Dashboard({ onLogout }) {
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <SidebarInset className="flex-1">
-          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-md">
+          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/100 shadow-sm">
             <div className="max-w-7xl mx-auto grid grid-cols-3 items-center gap-3 sm:gap-4 md:gap-6 px-4 md:px-6 py-2.5 md:py-3">
               <div className="flex items-center gap-2">
                 <span className="md:hidden">
@@ -110,7 +110,7 @@ export default function Dashboard({ onLogout }) {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search expenses..."
+                  placeholder="Search..."
                   aria-label="Search expenses"
                   className="w-full px-3 py-2 rounded-md border border-border bg-muted text-foreground focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />

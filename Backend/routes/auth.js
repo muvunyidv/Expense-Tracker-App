@@ -8,22 +8,26 @@ const router = express.Router();
 // Register
 router.post('/register', async (req, res) => {
   try {
-    // 1. Removed email from destructuring
-    const { phonenumber, username, password } = req.body;
+    const { email, phonenumber, username, password } = req.body;
 
-    // 2. Updated validation check
-    if (!phonenumber || !username || !password) {
+    if (!email || !phonenumber || !username || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    // 3. Check for existing username (removed email check)
+    // Check for existing email
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(409).json({ error: 'Email already registered' });
+    }
+
+    // Check for existing username
     const existingUsername = await User.findOne({ username });
     if (existingUsername) {
       return res.status(409).json({ error: 'Username already exists' });
     }
 
-    // 4. Create user without email
-    const user = new User({ phonenumber, username, password });
+    // Create user
+    const user = new User({ email, phonenumber, username, password });
     await user.save();
 
     const token = jwt.sign(
@@ -38,18 +42,24 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login
+// Login - Updated to accept email OR phonenumber as 'identifier'
 router.post('/login', async (req, res) => {
   try {
-    // 5. Switch from email to username for login
-    const { username, password } = req.body;
+    const { identifier, password } = req.body;
 
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password are required' });
+    if (!identifier || !password) {
+      return res.status(400).json({ error: 'Email/Phone and password are required' });
     }
 
-    // 6. Find user by username
-    const user = await User.findOne({ username });
+    // 
+    // Search the database for a user where identifier matches EITHER email OR phonenumber
+    const user = await User.findOne({
+      $or: [
+        { email: identifier },
+        { phonenumber: identifier }
+      ]
+    });
+
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -59,7 +69,6 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // 7. Updated JWT payload to use username instead of email
     const token = jwt.sign(
       { id: user._id, username: user.username }, 
       process.env.JWT_SECRET, 
@@ -72,17 +81,16 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Get current user
 router.get('/me', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
     res.json(user.toJSON());
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Logout
 router.post('/logout', authMiddleware, (req, res) => {
   res.json({ message: 'Logged out successfully' });
 });

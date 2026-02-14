@@ -7,9 +7,11 @@ function Auth({ onLogin }) {
   const [isSignup, setIsSignup] = useState(false);
   const [formData, setFormData] = useState({
     username: "",
+    email: "",
     password: "",
     confirmPassword: "",
-    phonenumber: "", // Matches backend variable name exactly
+    phonenumber: "", 
+    loginIdentifier: "" // New state for combined Login field
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,15 +23,20 @@ function Auth({ onLogin }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { username, password, confirmPassword, phonenumber } = formData;
+    const { username, email, password, confirmPassword, phonenumber, loginIdentifier } = formData;
 
-    // 1. Frontend Validation
-    if (!username || !password || (isSignup && (!phonenumber || !confirmPassword))) {
-      return setError("All fields are required");
-    }
-
-    if (isSignup && password !== confirmPassword) {
-      return setError("Passwords do not match");
+    // Validation
+    if (isSignup) {
+      if (!username || !password || !email || !phonenumber || !confirmPassword) {
+        return setError("All fields are required");
+      }
+      if (password !== confirmPassword) {
+        return setError("Passwords do not match");
+      }
+    } else {
+      if (!loginIdentifier || !password) {
+        return setError("Please enter your Email/Phone and Password");
+      }
     }
 
     try {
@@ -37,20 +44,19 @@ function Auth({ onLogin }) {
       setError("");
 
       if (isSignup) {
-        // Registration Logic
         await API.post("/auth/register", {
           username: username.trim(),
+          email: email.trim().toLowerCase(),
           password,
           phonenumber: phonenumber.trim(),
         });
 
         alert("Account created successfully! Please login.");
         setIsSignup(false);
-        setFormData({ username: "", password: "", confirmPassword: "", phonenumber: "" });
       } else {
-        // Login Logic - Now using username as the identifier
+        // Updated Login: Sends 'identifier' which can be email OR phone
         const res = await API.post("/auth/login", { 
-          username: username.trim(), 
+          identifier: loginIdentifier.trim().toLowerCase(), 
           password 
         });
         
@@ -58,7 +64,7 @@ function Auth({ onLogin }) {
         onLogin();
       }
     } catch (err) {
-      setError(err.response?.data?.error || "An error occurred during authentication");
+      setError(err.response?.data?.error || "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -85,39 +91,33 @@ function Auth({ onLogin }) {
             <CardTitle className="text-2xl font-bold text-center text-gray-900">
               {isSignup ? "Create an account" : "Welcome back"}
             </CardTitle>
-            <p className="text-sm text-gray-500 text-center">
-              {isSignup ? "Sign up to start tracking" : "Login to your dashboard"}
-            </p>
           </CardHeader>
 
           <CardContent className="pt-4">
-            {error && (
-              <div className="mb-4 p-3 rounded bg-red-100 border border-red-200 text-red-600 text-sm font-medium">
-                {error}
-              </div>
-            )}
-
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Username</label>
-                <input
-                  name="username"
-                  type="text"
-                  placeholder="Enter your username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  className="w-full mt-1 px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none transition-all"
-                />
-              </div>
-
-              {isSignup && (
+              {isSignup ? (
+                <>
+                  <div>
+                    <label className="text-xs font-semibold uppercase text-gray-500">Username</label>
+                    <input name="username" type="text" value={formData.username} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500" placeholder="Username" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold uppercase text-gray-500">Email Address</label>
+                    <input name="email" type="email" value={formData.email} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500" placeholder="name@example.com" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold uppercase text-gray-500">Phone Number</label>
+                    <input name="phonenumber" type="text" value={formData.phonenumber} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500" placeholder="07XXXXXXXX" />
+                  </div>
+                </>
+              ) : (
                 <div>
-                  <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Phone Number</label>
+                  <label className="text-xs font-semibold uppercase text-gray-500">Email or Phone Number</label>
                   <input
-                    name="phonenumber"
+                    name="loginIdentifier"
                     type="text"
-                    placeholder="e.g. 0712345678"
-                    value={formData.phonenumber}
+                    placeholder="Enter email or phone"
+                    value={formData.loginIdentifier}
                     onChange={handleChange}
                     className="w-full mt-1 px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none transition-all"
                   />
@@ -125,53 +125,28 @@ function Auth({ onLogin }) {
               )}
 
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Password</label>
-                <input
-                  name="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full mt-1 px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none transition-all"
-                />
+                <label className="text-xs font-semibold uppercase text-gray-500">Password</label>
+                <input name="password" type="password" placeholder="••••••••" value={formData.password} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none" />
               </div>
 
               {isSignup && (
                 <div>
-                  <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Confirm Password</label>
-                  <input
-                    name="confirmPassword"
-                    type="password"
-                    placeholder="••••••••"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    className="w-full mt-1 px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none transition-all"
-                  />
+                  <label className="text-xs font-semibold uppercase text-gray-500">Confirm Password</label>
+                  <input name="confirmPassword" type="password" placeholder="••••••••" value={formData.confirmPassword} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none" />
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full mt-2 py-3 rounded-lg bg-orange-500 text-white font-bold hover:bg-orange-600 active:scale-[0.98] transition-all shadow-md disabled:opacity-50"
-              >
+              {error && <div className="mt-2 p-3 rounded bg-red-100 border border-red-200 text-red-600 text-sm font-medium">{error}</div>}
+
+              <button type="submit" disabled={loading} className="w-full mt-2 py-3 rounded-lg bg-orange-500 text-white font-bold hover:bg-orange-600 active:scale-[0.98] transition-all disabled:opacity-50">
                 {loading ? "Processing..." : isSignup ? "CREATE ACCOUNT" : "LOG IN"}
               </button>
             </form>
 
             <div className="mt-6 text-center">
-              <button
-                onClick={() => {
-                  setIsSignup(!isSignup);
-                  setError("");
-                  setFormData({ username: "", password: "", confirmPassword: "", phonenumber: "" });
-                }}
-                className="text-sm text-gray-600 hover:text-orange-500 transition-colors"
-              >
+              <button onClick={() => { setIsSignup(!isSignup); setError(""); }} className="text-sm text-gray-600 hover:text-orange-500 transition-colors">
                 {isSignup ? "Already have an account? " : "Don't have an account? "}
-                <span className="font-bold underline text-orange-500">
-                  {isSignup ? "Login" : "Sign up"}
-                </span>
+                <span className="font-bold underline text-orange-500">{isSignup ? "Login" : "Sign up"}</span>
               </button>
             </div>
           </CardContent>
