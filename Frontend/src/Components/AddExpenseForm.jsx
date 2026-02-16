@@ -1,133 +1,78 @@
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
-
-const DEFAULT_CATEGORIES = [
-  "Food",
-  "Transport",
-  "Entertainment",
-  "Shopping",
-  "Utilities",
-  "Healthcare",
-  "Other",
-];
+import { X, Loader2 } from "lucide-react";
 
 const styles = `
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
-  @keyframes slideUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .modal-overlay {
-    animation: fadeIn 0.3s ease-out;
-  }
-
-  .modal-content {
-    animation: slideUp 0.3s ease-out;
-  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .modal-overlay { animation: fadeIn 0.3s ease-out; }
+  .modal-content { animation: slideUp 0.3s ease-out; }
 `;
 
-export function AddExpenseForm({ isOpen, onClose, onSubmit }) {
-  const [categories, setCategories] = useState([]);
+export function AddExpenseForm({ isOpen, onClose, onSubmit, categories = [] }) {
   const [formData, setFormData] = useState({
-    name: "",
     amount: "",
-    category: "Food",
-    description: "",
+    categoryId: "",
+    description: "", // Mapping to your 'Title' input
+    notes: "",       // The new separate description/notes field
     date: new Date().toISOString().split("T")[0],
   });
 
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
-  // Load categories from localStorage
+  // Sync categoryId when categories load or modal opens
+  // Fix: Always default to categories[0] to ensure the first DB entry is selected
   useEffect(() => {
-    const savedCategories = localStorage.getItem("categories");
-    if (savedCategories) {
-      const loadedCategories = JSON.parse(savedCategories);
-      setCategories(loadedCategories);
-      // Update category to first available if current category is not available
-      if (!loadedCategories.includes(formData.category)) {
-        setFormData((prev) => ({
-          ...prev,
-          category: loadedCategories[0] || "",
-        }));
-      }
-    } else {
-      setCategories([]);
+    if (isOpen && categories.length > 0) {
+      setFormData(prev => ({ 
+        ...prev, 
+        categoryId: categories[0]._id 
+      }));
     }
-  }, [isOpen]);
+  }, [isOpen, categories]);
 
   const validateForm = () => {
     const newErrors = {};
-
-    if (!formData.name || formData.name.trim() === "") {
-      newErrors.name = "Name is required";
-    }
-
-    if (!formData.amount || parseFloat(formData.amount) <= 0) {
-      newErrors.amount = "Amount must be greater than 0";
-    }
-
-    if (!formData.category) {
-      newErrors.category = "Category is required";
-    }
-
-    if (!formData.date) {
-      newErrors.date = "Date is required";
-    }
-
+    if (!formData.description.trim()) newErrors.description = "Title is required";
+    if (!formData.amount || parseFloat(formData.amount) <= 0) newErrors.amount = "Invalid amount";
+    if (!formData.categoryId) newErrors.categoryId = "Please select a category";
+    if (!formData.date) newErrors.date = "Date is required";
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
 
-    if (validateForm()) {
-      onSubmit({
+    setSubmitting(true);
+    try {
+      await onSubmit({
         ...formData,
         amount: parseFloat(formData.amount),
       });
 
       // Reset form
       setFormData({
-        name: "",
         amount: "",
-        category: "Food",
+        categoryId: categories[0]?._id || "",
         description: "",
+        notes: "",
         date: new Date().toISOString().split("T")[0],
       });
-      setErrors({});
+      onClose();
+    } catch (err) {
+      setErrors({ server: "Failed to save expense." });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    // Clear error for this field
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: "",
-      }));
-    }
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
   };
 
   if (!isOpen) return null;
@@ -135,149 +80,103 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit }) {
   return (
     <>
       <style>{styles}</style>
-      <div className="modal-overlay fixed inset-0 bg-black/60 dark:bg-black/70 flex items-center justify-center z-50">
-        <div className="modal-content bg-white dark:bg-white rounded-lg shadow-xl w-full max-w-md mx-4 border border-gray-200 dark:border-white">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-black">Add New Expense</h2>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-muted rounded-md transition-colors"
-            aria-label="Close"
-          >
-            <X className="w-5 h-5 text-black" />
-          </button>
+      <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+        <div className="modal-content bg-white rounded-lg shadow-xl w-full max-w-md mx-4 border border-gray-200">
+          
+          <div className="flex items-center justify-between p-6 border-b border-gray-100">
+            <h2 className="text-xl font-semibold text-gray-900">Add New Expense</h2>
+            <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-md transition-colors">
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            
+            {/* Title */}
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700">Expense Title *</label>
+              <input 
+                type="text" 
+                name="description" 
+                value={formData.description} 
+                onChange={handleChange} 
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" 
+                placeholder="e.g. Grocery Shopping" 
+              />
+              {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
+            </div>
+
+            {/* Separate Description Field (Notes) */}
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700">Description / Notes</label>
+              <textarea 
+                name="notes" 
+                value={formData.notes} 
+                onChange={handleChange} 
+                rows="2"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none resize-none" 
+                placeholder="Add more details here..." 
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">Amount *</label>
+                <input 
+                  type="number" 
+                  name="amount" 
+                  value={formData.amount} 
+                  onChange={handleChange} 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" 
+                  placeholder="0.00" 
+                />
+                {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">Date *</label>
+                <input 
+                  type="date" 
+                  name="date" 
+                  value={formData.date} 
+                  onChange={handleChange} 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" 
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700">Category *</label>
+              <select 
+                name="categoryId" 
+                value={formData.categoryId} 
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none bg-white"
+              >
+                {categories.length > 0 ? (
+                  categories.map((cat) => (
+                    <option key={cat._id} value={cat._id}>{cat.name}</option>
+                  ))
+                ) : (
+                  <option value="" disabled>Loading categories...</option>
+                )}
+              </select>
+            </div>
+
+            {errors.server && <p className="text-red-500 text-sm text-center">{errors.server}</p>}
+
+            <div className="flex gap-3 pt-4">
+              <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
+              <button 
+                type="submit" 
+                disabled={submitting}
+                className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium flex justify-center items-center shadow-md active:scale-95 disabled:opacity-70"
+              >
+                {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Add Expense"}
+              </button>
+            </div>
+          </form>
         </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-
-          {/* Name Field */}
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium mb-2 text-black dark:text-black">
-              Name *
-            </label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="Enter expense name"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-gray-900 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
-            {errors.name && (
-              <p className="text-red-500 text-sm mt-1">{errors.name}</p>
-            )}
-          </div>
-
-          {/* Amount Field */}
-          <div>
-            <label htmlFor="amount" className="block text-sm font-medium mb-2 text-black dark:text-black">
-              Amount *
-            </label>
-            <input
-              type="number"
-              id="amount"
-              name="amount"
-              value={formData.amount}
-              onChange={handleChange}
-              placeholder="0.00"
-              step="0.01"
-              min="0"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-gray-900 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
-            {errors.amount && (
-              <p className="text-red-500 text-sm mt-1">{errors.amount}</p>
-            )}
-          </div>
-
-          {/* Category Field */}
-          <div>
-            <label
-              htmlFor="category"
-              className="block text-sm font-medium mb-2 text-black dark:text-black"
-            >
-              Category *
-            </label>
-            <select
-              id="category"
-              name="category"
-              value={formData.category}
-              onChange={handleChange}
-              disabled={categories.length === 0}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-black focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {categories.length === 0 ? (
-                <option value="">You have no categories yet</option>
-              ) : (
-                categories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))
-              )}
-            </select>
-            {errors.category && (
-              <p className="text-red-500 text-sm mt-1">{errors.category}</p>
-            )}
-          </div>
-
-          {/* Description Field */}
-          <div>
-            <label
-              htmlFor="description"
-              className="block text-sm font-medium mb-2 text-black dark:text-black"
-            >
-              Description
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Add a description (optional)"
-              rows="3"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-gray-900 dark:text-gray-900 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
-            />
-          </div>
-
-          {/* Date Field */}
-          <div>
-            <label htmlFor="date" className="block text-sm font-medium mb-2 text-black dark:text-black">
-              Date *
-            </label>
-            <input
-              type="date"
-              id="date"
-              name="date"
-              value={formData.date}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-white text-black dark:text-black focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
-            {errors.date && (
-              <p className="text-red-500 text-sm mt-1">{errors.date}</p>
-            )}
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 text-black dark:text-black hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 rounded-lg bg-orange-500 text-white dark:bg-orange-500 hover:bg-orange-600 transition-colors font-medium"
-            >
-              Add Expense
-            </button>
-          </div>
-        </form>
-      </div>
       </div>
     </>
   );

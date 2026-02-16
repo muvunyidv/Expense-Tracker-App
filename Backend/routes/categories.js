@@ -4,7 +4,7 @@ const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
 
-// Get all categories
+// Get all categories for logged-in user
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const categories = await Category.find({ userId: req.user.id }).sort({ name: 1 });
@@ -27,8 +27,8 @@ router.get('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// Create category
-router.post('/', async (req, res) => {
+// Create category - FIXED: Added authMiddleware here
+router.post('/', authMiddleware, async (req, res) => {
   try {
     const { name, description } = req.body;
 
@@ -37,7 +37,7 @@ router.post('/', async (req, res) => {
     }
 
     const category = new Category({
-      userId: req.user.id,
+      userId: req.user.id, // Now works because authMiddleware is present
       name: name.trim(),
       description
     });
@@ -45,10 +45,10 @@ router.post('/', async (req, res) => {
     await category.save();
     res.status(201).json(category);
   } catch (error) {
+    // 11000 is the MongoDB code for a duplicate key (from your unique index)
     if (error.code === 11000) {
-      return res.status(409).json({ error: 'Category already exists' });
+      return res.status(409).json({ error: 'You already have a category with this name' });
     }
-
     res.status(500).json({ error: error.message });
   }
 });
@@ -64,9 +64,10 @@ router.put('/:id', authMiddleware, async (req, res) => {
 
     const category = await Category.findOneAndUpdate(
       { _id: req.params.id, userId: req.user.id },
-      { name, description, updatedAt: new Date() },
-      { new: true }
+      { name: name.trim(), description },
+      { new: true, runValidators: true } // runValidators ensures schema rules are followed
     );
+    
     if (!category) {
       return res.status(404).json({ error: 'Category not found' });
     }

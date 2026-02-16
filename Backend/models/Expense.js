@@ -16,9 +16,17 @@ const expenseSchema = new mongoose.Schema({
     required: true, 
     min: 0 
   },
+  // This acts as the "Expense Title" (e.g., "Grocery Shopping")
   description: { 
     type: String, 
-    default: '' 
+    required: true,
+    trim: true
+  },
+  // This acts as the separate "Description / Notes" field you added to the form
+  notes: { 
+    type: String, 
+    default: '',
+    trim: true
   },
   date: { 
     type: Date, 
@@ -26,6 +34,7 @@ const expenseSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+// Optimized Indexes
 expenseSchema.index({ userId: 1, date: -1 });
 expenseSchema.index({ userId: 1, categoryId: 1 });
 

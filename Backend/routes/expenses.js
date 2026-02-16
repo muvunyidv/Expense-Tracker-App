@@ -118,7 +118,8 @@ router.get('/:id', async (req, res) => {
 ================================ */
 router.post('/', async (req, res) => {
   try {
-    const { categoryId, amount, description, date } = req.body;
+    // UPDATED: Destructure 'notes' from request body
+    const { categoryId, amount, description, notes, date } = req.body;
 
     if (!categoryId || amount == null || !date) {
       return res.status(400).json({
@@ -130,7 +131,6 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Invalid category ID' });
     }
 
-    // Validate category ownership
     const category = await Category.findOne({
       _id: categoryId,
       userId: req.user.id
@@ -145,6 +145,7 @@ router.post('/', async (req, res) => {
       categoryId,
       amount,
       description,
+      notes, // SAVED: Added new field
       date
     });
 
@@ -163,7 +164,8 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { categoryId, amount, description, date } = req.body;
+    // UPDATED: Destructure 'notes' from request body
+    const { categoryId, amount, description, notes, date } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ error: 'Invalid expense ID' });
@@ -179,7 +181,6 @@ router.put('/:id', async (req, res) => {
       return res.status(400).json({ error: 'Invalid category ID' });
     }
 
-    // Validate category ownership
     const category = await Category.findOne({
       _id: categoryId,
       userId: req.user.id
@@ -191,7 +192,7 @@ router.put('/:id', async (req, res) => {
 
     const expense = await Expense.findOneAndUpdate(
       { _id: id, userId: req.user.id },
-      { categoryId, amount, description, date },
+      { categoryId, amount, description, notes, date }, // UPDATED: Included 'notes' in update
       { new: true }
     ).populate('categoryId', 'name');
 

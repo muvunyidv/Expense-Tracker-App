@@ -17,6 +17,7 @@ const categorySchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+// Ensures a user can't have duplicate category names (e.g., two "Food" categories)
 categorySchema.index({ userId: 1, name: 1 }, { unique: true });
 
 module.exports = mongoose.model('Category', categorySchema);
