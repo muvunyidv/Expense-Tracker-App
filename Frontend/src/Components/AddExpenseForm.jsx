@@ -8,28 +8,42 @@ const styles = `
   .modal-content { animation: slideUp 0.3s ease-out; }
 `;
 
-export function AddExpenseForm({ isOpen, onClose, onSubmit, categories = [] }) {
+export function AddExpenseForm({ isOpen, onClose, onSubmit, categories = [], initialData = null }) {
   const [formData, setFormData] = useState({
     amount: "",
     categoryId: "",
-    description: "", // Mapping to your 'Title' input
-    notes: "",       // The new separate description/notes field
+    description: "",
+    notes: "",
     date: new Date().toISOString().split("T")[0],
   });
 
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  // Sync categoryId when categories load or modal opens
-  // Fix: Always default to categories[0] to ensure the first DB entry is selected
+  // Sync data when modal opens OR initialData changes (Edit mode vs Add mode)
   useEffect(() => {
-    if (isOpen && categories.length > 0) {
-      setFormData(prev => ({ 
-        ...prev, 
-        categoryId: categories[0]._id 
-      }));
+    if (isOpen) {
+      if (initialData) {
+        // EDIT MODE: Populate with existing data
+        setFormData({
+          amount: initialData.amount,
+          categoryId: initialData.categoryId?._id || initialData.categoryId || "",
+          description: initialData.description || "",
+          notes: initialData.notes || "",
+          date: new Date(initialData.date).toISOString().split("T")[0],
+        });
+      } else {
+        // ADD MODE: Reset to defaults
+        setFormData({
+          amount: "",
+          categoryId: categories[0]?._id || "",
+          description: "",
+          notes: "",
+          date: new Date().toISOString().split("T")[0],
+        });
+      }
     }
-  }, [isOpen, categories]);
+  }, [isOpen, initialData, categories]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -52,16 +66,7 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit, categories = [] }) {
         ...formData,
         amount: parseFloat(formData.amount),
       });
-
-      // Reset form
-      setFormData({
-        amount: "",
-        categoryId: categories[0]?._id || "",
-        description: "",
-        notes: "",
-        date: new Date().toISOString().split("T")[0],
-      });
-      onClose();
+      onClose(); // Parent handles state reset (editingExpense = null)
     } catch (err) {
       setErrors({ server: "Failed to save expense." });
     } finally {
@@ -84,7 +89,9 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit, categories = [] }) {
         <div className="modal-content bg-white rounded-lg shadow-xl w-full max-w-md mx-4 border border-gray-200">
           
           <div className="flex items-center justify-between p-6 border-b border-gray-100">
-            <h2 className="text-xl font-semibold text-gray-900">Add New Expense</h2>
+            <h2 className="text-xl font-semibold text-gray-900">
+              {initialData ? "Edit Expense" : "Add New Expense"}
+            </h2>
             <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-md transition-colors">
               <X className="w-5 h-5 text-gray-500" />
             </button>
@@ -106,7 +113,7 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit, categories = [] }) {
               {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
             </div>
 
-            {/* Separate Description Field (Notes) */}
+            {/* Notes */}
             <div>
               <label className="block text-sm font-medium mb-2 text-gray-700">Description / Notes</label>
               <textarea 
@@ -153,13 +160,9 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit, categories = [] }) {
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none bg-white"
               >
-                {categories.length > 0 ? (
-                  categories.map((cat) => (
-                    <option key={cat._id} value={cat._id}>{cat.name}</option>
-                  ))
-                ) : (
-                  <option value="" disabled>Loading categories...</option>
-                )}
+                {categories.map((cat) => (
+                  <option key={cat._id} value={cat._id}>{cat.name}</option>
+                ))}
               </select>
             </div>
 
@@ -172,7 +175,11 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit, categories = [] }) {
                 disabled={submitting}
                 className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium flex justify-center items-center shadow-md active:scale-95 disabled:opacity-70"
               >
-                {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Add Expense"}
+                {submitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  initialData ? "Save Changes" : "Add Expense"
+                )}
               </button>
             </div>
           </form>

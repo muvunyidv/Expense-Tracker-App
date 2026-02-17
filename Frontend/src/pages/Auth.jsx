@@ -6,7 +6,6 @@ import API from "../api";
 function Auth({ onLogin }) {
   const [isSignup, setIsSignup] = useState(false);
   
-  // Define initial state to reuse for resetting
   const initialFormState = {
     username: "",
     email: "",
@@ -20,11 +19,10 @@ function Auth({ onLogin }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Function to switch between Login and Signup and CLEAR form
   const toggleAuthMode = () => {
     setIsSignup(!isSignup);
     setError("");
-    setFormData(initialFormState); // This wipes the password and other fields
+    setFormData(initialFormState);
   };
 
   const handleChange = (e) => {
@@ -36,6 +34,7 @@ function Auth({ onLogin }) {
     e.preventDefault();
     const { username, email, password, confirmPassword, phonenumber, loginIdentifier } = formData;
 
+    // Validation logic
     if (isSignup) {
       if (!username || !password || !email || !phonenumber || !confirmPassword) {
         return setError("All fields are required");
@@ -54,17 +53,28 @@ function Auth({ onLogin }) {
       setError("");
 
       if (isSignup) {
-        await API.post("/auth/register", {
+        // 1. Register the user
+        const res = await API.post("/auth/register", {
           username: username.trim(),
           email: email.trim().toLowerCase(),
           password,
           phonenumber: phonenumber.trim(),
         });
 
-        alert("Account created successfully! Please login.");
-        setIsSignup(false);
-        setFormData(initialFormState); // Reset after successful registration
+        // 2. Capture token from the register response (already provided by your backend)
+        const token = res.data.token;
+
+        if (token) {
+          localStorage.setItem("token", token);
+          // 3. Immediately trigger onLogin to navigate to homepage
+          onLogin(); 
+        } else {
+          // Fallback logic
+          setIsSignup(false);
+          setFormData(initialFormState);
+        }
       } else {
+        // Standard Login
         const res = await API.post("/auth/login", { 
           identifier: loginIdentifier.trim().toLowerCase(), 
           password 

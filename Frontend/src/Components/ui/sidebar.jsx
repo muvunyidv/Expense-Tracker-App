@@ -47,8 +47,9 @@ export function SidebarTrigger({ className = "", children, ...props }) {
   );
 }
 
+// Updated to support sticky footer via flexbox
 export function SidebarInset({ className = "", ...props }) {
-  return <main className={`flex-1 ${className}`} {...props} />;
+  return <main className={`flex-1 flex flex-col min-h-screen ${className}`} {...props} />;
 }
 
 export function Sidebar({ className = "", children, ...props }) {
