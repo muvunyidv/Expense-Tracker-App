@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { ExpenseList } from "../Components/ExpenseList";
 import { ThemeToggle } from "../Components/ThemeToggle";
-import { AppSidebar, Footer } from "../Components/AppSidebar"; // IMPORTED FOOTER
+import { AppSidebar, Footer } from "../Components/AppSidebar";
 import { AddExpenseForm } from "../Components/AddExpenseForm";
 import { ExpenseViewModal } from "../Components/ExpenseViewModal";
 import { Categories } from "./Categories";
@@ -11,7 +11,7 @@ import {
   SidebarTrigger,
   SidebarInset,
 } from "../Components/ui/sidebar";
-import { LogOut, PlusCircle, User, ArrowRight } from "lucide-react";
+import { LogOut, PlusCircle, User, ArrowRight, Wallet } from "lucide-react"; // Added Wallet icon
 
 export default function Dashboard({ onLogout }) {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -22,7 +22,18 @@ export default function Dashboard({ onLogout }) {
   const [currentPage, setCurrentPage] = useState(() => window.location.hash || "#summary");
   const [searchQuery, setSearchQuery] = useState("");
   const [categories, setCategories] = useState([]);
+  const [totalExpenses, setTotalExpenses] = useState(0); 
   const menuRef = useRef(null);
+
+  const fetchTotal = async () => {
+    try {
+      const res = await API.get("/expenses");
+      const total = res.data.reduce((acc, curr) => acc + curr.amount, 0);
+      setTotalExpenses(total);
+    } catch (err) {
+      console.error("Failed to fetch total", err);
+    }
+  };
 
   useEffect(() => {
     const onHashChange = () => {
@@ -34,6 +45,7 @@ export default function Dashboard({ onLogout }) {
     window.addEventListener("hashchange", onHashChange);
     fetchCategories();
     fetchUserData();
+    fetchTotal();
 
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -41,10 +53,12 @@ export default function Dashboard({ onLogout }) {
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("expensesUpdated", fetchTotal);
 
     return () => {
       window.removeEventListener("hashchange", onHashChange);
       document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("expensesUpdated", fetchTotal);
     };
   }, []);
 
@@ -130,10 +144,10 @@ export default function Dashboard({ onLogout }) {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
+      <div className="flex min-h-screen w-full relative"> {/* Added relative for floating pill */}
+        <AppSidebar total={totalExpenses} /> 
+        
         <SidebarInset>
-          {/* Main Content Wrapper */}
           <div className="flex-1 flex flex-col">
             <div className="sticky top-0 z-50 bg-background/95 backdrop-blur shadow-sm border-b border-border">
               <div className="max-w-7xl mx-auto grid grid-cols-3 items-center px-4 md:px-6 py-3">
@@ -184,7 +198,6 @@ export default function Dashboard({ onLogout }) {
               </div>
             </div>
 
-            {/* Content Area */}
             <div className="flex-1 bg-background p-6">
               <div className="max-w-7xl mx-auto space-y-6">
                 {currentPage !== "#categories" && (
@@ -224,9 +237,23 @@ export default function Dashboard({ onLogout }) {
                 )}
               </div>
             </div>
-          </div>
 
-          {/* CLEAN UTILITY FOOTER */}
+            {/* MOBILE FLOATING TOTAL PILL */}
+            <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-10 duration-500">
+              <div className="flex items-center gap-3 px-5 py-3 bg-zinc-900/90 dark:bg-orange-600/90 text-white rounded-2xl shadow-2xl border border-white/10 backdrop-blur-md">
+                <div className="p-2 bg-white/20 rounded-lg">
+                  <Wallet className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-bold uppercase tracking-wider opacity-80">Total Expenses</span>
+                  <span className="text-sm font-black tracking-tight">
+                    {totalExpenses.toLocaleString()} <span className="text-[10px]">Rwf</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+          </div>
           <Footer />
         </SidebarInset>
       </div>
