@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { X, Loader2 } from "lucide-react"; // Added Loader2 for a better UX
-import API from "../api"; // Import your axios instance
+import { useState, useEffect } from "react";
+import { X, Loader2 } from "lucide-react";
+import API from "../api";
 
 const styles = `
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -9,11 +9,23 @@ const styles = `
   .modal-content { animation: slideUp 0.3s ease-out; }
 `;
 
-export function AddCategoryForm({ isOpen, onClose, onCategoryAdded }) {
+export function AddCategoryForm({ isOpen, onClose, onCategoryAdded, initialData }) {
   const [newCategory, setNewCategory] = useState("");
-  const [description, setDescription] = useState(""); // Added description state
+  const [description, setDescription] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false); // Track API call status
+  const [loading, setLoading] = useState(false);
+
+  // Sync state with initialData whenever the modal opens or the item changes
+  useEffect(() => {
+    if (initialData) {
+      setNewCategory(initialData.name || "");
+      setDescription(initialData.description || "");
+    } else {
+      setNewCategory("");
+      setDescription("");
+    }
+    setError("");
+  }, [initialData, isOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,20 +40,25 @@ export function AddCategoryForm({ isOpen, onClose, onCategoryAdded }) {
       setLoading(true);
       setError("");
 
-      // 1. Make the Backend Call
-      const response = await API.post("/categories", {
-        name: trimmedCategory,
-        description: description.trim(),
-      });
+      let response;
+      if (initialData) {
+        // UPDATE MODE
+        response = await API.put(`/categories/${initialData._id}`, {
+          name: trimmedCategory,
+          description: description.trim(),
+        });
+      } else {
+        // CREATE MODE
+        response = await API.post("/categories", {
+          name: trimmedCategory,
+          description: description.trim(),
+        });
+      }
 
-      // 2. Notify parent to refresh list with the new data from DB
       onCategoryAdded(response.data);
-      
-      // 3. Reset and Close
       handleClose();
     } catch (err) {
-      // Handle "Category already exists" or other backend errors
-      setError(err.response?.data?.error || "Failed to add category. Please try again.");
+      setError(err.response?.data?.error || "Failed to save category.");
     } finally {
       setLoading(false);
     }
@@ -62,14 +79,15 @@ export function AddCategoryForm({ isOpen, onClose, onCategoryAdded }) {
       <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50">
         <div className="modal-content bg-white rounded-lg shadow-xl w-full max-w-md mx-4 border border-gray-200">
           <div className="flex items-center justify-between p-6 border-b">
-            <h2 className="text-xl font-semibold text-gray-900">Add New Category</h2>
+            <h2 className="text-xl font-semibold text-gray-900">
+              {initialData ? "Edit Category" : "Add New Category"}
+            </h2>
             <button onClick={handleClose} className="p-1 hover:bg-gray-100 rounded-md transition-colors">
               <X className="w-5 h-5 text-black" />
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            {/* Category Name */}
             <div>
               <label htmlFor="categoryInput" className="block text-sm font-medium mb-2 text-black">
                 Category Name *
@@ -86,7 +104,6 @@ export function AddCategoryForm({ isOpen, onClose, onCategoryAdded }) {
               />
             </div>
 
-            {/* Description (Optional) */}
             <div>
               <label htmlFor="descriptionInput" className="block text-sm font-medium mb-2 text-black">
                 Description (Optional)
@@ -116,7 +133,13 @@ export function AddCategoryForm({ isOpen, onClose, onCategoryAdded }) {
                 disabled={loading}
                 className="flex-1 px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors font-medium flex items-center justify-center"
               >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Add Category"}
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : initialData ? (
+                  "Update Category"
+                ) : (
+                  "Add Category"
+                )}
               </button>
             </div>
           </form>

@@ -41,8 +41,7 @@ export function AppSidebar({ total = 0 }) {
   };
 
   return (
-    <Sidebar>
-     
+    <Sidebar className="border-gray-300">
       <SidebarContent className="justify-between">
         <div>
           <SidebarGroup className="pt-6">
@@ -114,13 +113,13 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="mt-auto py-8 px-6 border-t border-zinc-100 dark:border-zinc-800/50 bg-white dark:bg-zinc-950">
+   <footer className="mt-auto py-8 px-6 border-t border-gray-300  bg-card dark:bg-muted/50 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
         <div className="flex flex-col items-center md:items-start gap-1">
           <div className="flex items-center gap-2">
              <div className="h-2 w-2 rounded-full bg-orange-500" />
-             <p className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-tight">
-               Expense Tracker
+             <p className="text-sm font-bold text-backround dark:text-black uppercase tracking-tight">
+             Expense Tracker
              </p>
           </div>
           <p className="text-xs text-zinc-500">

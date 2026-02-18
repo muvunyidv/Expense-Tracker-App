@@ -1,47 +1,19 @@
 import { useState, useEffect } from "react";
-import { Coffee, Home, ShoppingBag, Car, Utensils, Smartphone, Trash2, Loader2, Pencil, AlertTriangle, X } from "lucide-react";
+import { Coffee, Home, ShoppingBag, Car, Utensils, Smartphone, Trash2, Loader2, Pencil } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { DeleteConfirmModal } from "./DeleteConfirmModal";
 import API from "../api";
 
-/* ================================
-   Custom Delete Confirmation Modal
-================================ */
-function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName }) {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[70] backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden border border-gray-200 dark:border-zinc-800 animate-in zoom-in-95 duration-200">
-        <div className="p-6 text-center">
-          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle className="w-8 h-8 text-red-600" />
-          </div>
-          
-          <h3 className="text-xl font-bold text-black dark:text-white mb-2">Delete Expense?</h3>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
-            Are you sure you want to delete <span className="font-semibold text-black dark:text-white">"{itemName}"</span>? This action cannot be undone.
-          </p>
-
-          <div className="flex gap-3">
-            <button 
-              onClick={onClose}
-              className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-zinc-800 text-black dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors"
-            >
-              Cancel
-            </button>
-            <button 
-              onClick={onConfirm}
-              className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20 flex items-center justify-center gap-2"
-            >
-              <Trash2 className="w-4 h-4" />
-              Delete
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+// HELPER: Custom Date Formatter (e.g., 12/Feb/2026)
+const formatDate = (dateString) => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  }).format(date).replace(/ /g, '/');
+};
 
 const getCategoryIcon = (categoryName = "") => {
   const name = categoryName.toLowerCase();
@@ -55,11 +27,9 @@ const getCategoryIcon = (categoryName = "") => {
 };
 
 export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) {
-  const [filter, setFilter] = useState("daily");
+  const [filter, setFilter] = useState("all");
   const [recentExpenses, setRecentExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  // NEW: State for the custom delete popup
   const [expenseToDelete, setExpenseToDelete] = useState(null);
 
   const fetchExpenses = async () => {
@@ -80,21 +50,41 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
     return () => window.removeEventListener("expensesUpdated", fetchExpenses);
   }, []);
 
-  // Updated: Actual deletion logic called by the custom modal
   const confirmDelete = async () => {
     if (!expenseToDelete) return;
     try {
       await API.delete(`/expenses/${expenseToDelete._id}`);
       setRecentExpenses(prev => prev.filter(expense => expense._id !== expenseToDelete._id));
-      setExpenseToDelete(null); // Close the popup
+      setExpenseToDelete(null);
+      window.dispatchEvent(new Event("expensesUpdated"));
     } catch (error) {
       console.error("Failed to delete expense:", error);
     }
   };
 
   const filteredExpenses = recentExpenses.filter((expense) => {
-    const query = searchQuery.toLowerCase();
-    return expense.description?.toLowerCase().includes(query);
+    const matchesSearch = expense.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchesSearch) return false;
+
+    const expenseDate = new Date(expense.date);
+    const now = new Date();
+
+    switch (filter) {
+      case "today":
+        return expenseDate.toDateString() === now.toDateString();
+      case "weekly":
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(now.getDate() - 7);
+        return expenseDate >= oneWeekAgo;
+      case "monthly":
+        return (
+          expenseDate.getMonth() === now.getMonth() &&
+          expenseDate.getFullYear() === now.getFullYear()
+        );
+      case "all":
+      default:
+        return true;
+    }
   });
 
   const total = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
@@ -103,15 +93,17 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
     <>
       <Card className="border-gray-300/60 dark:border-zinc-700/60">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <CardTitle>Recent Expenses</CardTitle>
-            <div className="flex gap-2">
-              {["daily", "weekly", "monthly"].map((t) => (
+            <div className="flex gap-1 bg-muted/50 p-1 rounded-xl w-fit">
+              {["all", "today", "weekly", "monthly"].map((t) => (
                 <button
                   key={t}
                   onClick={() => setFilter(t)}
-                  className={`px-3 py-1.5 text-sm rounded-lg capitalize transition-colors ${
-                    filter === t ? "bg-orange-500 text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  className={`px-4 py-1.5 text-xs font-bold rounded-lg capitalize transition-all ${
+                    filter === t 
+                      ? "bg-orange-500 text-white shadow-sm" 
+                      : "text-muted-foreground hover:bg-muted"
                   }`}
                 >
                   {t}
@@ -124,57 +116,61 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
           {loading ? (
             <div className="flex flex-col items-center justify-center p-12 space-y-4">
               <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
-              <p className="text-sm text-muted-foreground">Fetching expenses...</p>
+              <p className="text-sm text-muted-foreground font-medium">Fetching expenses...</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-300/60 dark:divide-zinc-700/60">
               {filteredExpenses.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground">
-                  No expenses found.
+                <div className="flex flex-col items-center justify-center p-12 text-center">
+                  <div className="bg-muted/50 p-4 rounded-full mb-4">
+                    <ShoppingBag className="w-10 h-10 text-muted-foreground/40" />
+                  </div>
+                  <h3 className="text-lg font-medium text-foreground">No expenses found</h3>
+                  <p className="text-sm text-muted-foreground max-w-[200px] mx-auto mt-1">
+                    Try adjusting your filters or search query.
+                  </p>
                 </div>
               ) : (
                 filteredExpenses.map((expense) => (
                   <div 
                     key={expense._id} 
-                    className="flex items-center justify-between py-4 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-zinc-800/20 transition-colors px-2 -mx-2 rounded-lg"
+                    className="flex items-center justify-between py-4 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-zinc-800/20 transition-colors px-2 -mx-2 rounded-lg group"
                     onClick={() => onViewExpense && onViewExpense(expense)}
                   >
                     <div className="flex items-start gap-4">
-                      <div className="mt-1 p-2 bg-muted rounded-lg shrink-0">
+                      <div className="mt-1 p-2 bg-muted rounded-lg shrink-0 group-hover:bg-background transition-colors">
                         {getCategoryIcon(expense.categoryId?.name)}
                       </div>
                       <div>
-                        <div className="font-bold text-black dark:text-black">
+                        <div className="font-bold text-foreground">
                           {expense.description}
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          {expense.categoryId?.name || "Uncategorized"} • {new Date(expense.date).toLocaleDateString()}
+                        <div className="text-xs text-muted-foreground">
+                          <span className="font-semibold text-orange-500/80">
+                            {expense.categoryId?.name || "Uncategorized"}
+                          </span>
+                          {" • "}{formatDate(expense.date)}
                         </div>
-                        {expense.notes && (
-                          <div className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                            {expense.notes}
-                          </div>
-                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="font-bold text-black dark:text-black mr-2">
-                        {expense.amount.toLocaleString()} Rwf
+                    
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <div className="font-bold text-foreground">
+                          {expense.amount.toLocaleString()} <span className="text-[10px] text-muted-foreground">Rwf</span>
+                        </div>
                       </div>
                       
-                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => onEditExpense && onEditExpense(expense)}
-                          className="p-1 text-blue-400 hover:text-blue-600 transition-colors"
-                          title="Edit Expense"
+                          className="p-2 text-muted-foreground hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all"
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
-
                         <button
-                          onClick={() => setExpenseToDelete(expense)} // Updated: Trigger the popup
-                          className="p-1 text-red-400 hover:text-red-600 transition-colors"
-                          title="Delete Expense"
+                          onClick={() => setExpenseToDelete(expense)}
+                          className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-all"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -186,8 +182,9 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
             </div>
           )}
 
+          {/* Restored Original Minimal Footer */}
           <div className="mt-4 pt-4 border-t border-gray-300/60 dark:border-zinc-700/60 flex items-center justify-between">
-            <div className="font-semibold text-black uppercase text-sm tracking-wider">Total</div>
+            <div className="font-semibold text-foreground uppercase text-sm tracking-wider">Total</div>
             <div className="text-xl font-bold text-orange-500">
               {total.toLocaleString()} Rwf
             </div>
@@ -195,7 +192,6 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
         </CardContent>
       </Card>
 
-      {/* NEW: Custom Delete Confirmation Popup */}
       <DeleteConfirmModal 
         isOpen={!!expenseToDelete}
         onClose={() => setExpenseToDelete(null)}

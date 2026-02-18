@@ -84,7 +84,7 @@ export function Sidebar({ className = "", children, ...props }) {
         `}
         {...props}
       >
-        <div className="w-64 h-full flex flex-col border-r border-border bg-background">
+        <div className="w-64 h-full flex flex-col border-r border-gray-100 bg-background">
           {children}
         </div>
       </aside>

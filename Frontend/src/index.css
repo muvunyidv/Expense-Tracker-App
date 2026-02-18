@@ -1,56 +1,44 @@
 @import "tailwindcss";
 
 @theme {
-  /* Light theme – keep clean minimal look */
-  --color-background: 0 0% 100%;
-  --color-foreground: 222 47% 11%;
-  --color-muted: 210 40% 96%;
-  --color-muted-foreground: 215 16% 47%;
-  --color-border: 0 0% 88%;
-  --color-primary: 142 76% 36%; /* green accent similar to screenshot */
-  --color-primary-foreground: 0 0% 100%;
-  --color-card: 0 0% 100%;
-  --color-card-foreground: 222 47% 11%;
-  --color-sidebar: 210 25% 96%; /* subtle gray sidebar */
-  --color-sidebar-foreground: 222 47% 11%;
-  --color-accent: 28 100% 59%; /* orange accent rgb(254, 132, 49) */
+  --color-background: hsl(var(--color-background));
+  --color-foreground: hsl(var(--color-foreground));
+  --color-muted: hsl(var(--color-muted));
+  --color-muted-foreground: hsl(var(--color-muted-foreground));
+  --color-border: hsl(var(--color-border));
+  --color-card: hsl(var(--color-card));
+  --color-card-foreground: hsl(var(--color-card-foreground));
+  --color-accent: hsl(var(--color-accent));
 }
 
 @layer base {
   :root {
     color-scheme: light;
+    /* PURE WHITE THEME */
+    --color-background: 0 0% 100%; 
+    --color-foreground: 210 28% 7%;
+    --color-muted: 210 20% 96%;
+    --color-muted-foreground: 215 15% 40%;
+    --color-border: 210 20% 90%;
+    --color-card: 0 0% 100%; 
+    --color-card-foreground: 210 28% 7%;
+    --color-accent: 28 100% 50%;
   }
 
+  /* Only apply dark variables if the .dark class is explicitly present */
   .dark {
-    /* Dark dashboard palette similar to the reference image */
     color-scheme: dark;
-    --color-background: 210 28% 7%;        /* page background - near black */
-    --color-foreground: 210 40% 96%;       /* main text */
-    --color-muted: 210 15% 18%;            /* subdued surfaces */
-    --color-muted-foreground: 215 15% 65%; /* secondary text */
-    --color-border: 210 10% 28%;           /* soft borders */
-    --color-primary: 142 72% 45%;          /* green accent */
-    --color-primary-foreground: 0 0% 0%;
-    --color-card: 210 18% 12%;             /* card backgrounds */
+    --color-background: 210 28% 7%;
+    --color-foreground: 210 40% 96%;
+    --color-muted: 210 15% 18%;
+    --color-muted-foreground: 215 15% 65%;
+    --color-border: 210 10% 28%;
+    --color-card: 210 18% 12%;
     --color-card-foreground: 210 40% 96%;
-    --color-sidebar: 210 20% 9%;           /* sidebar slightly lighter than bg */
-    --color-sidebar-foreground: 210 25% 90%;
-    --color-accent: 28 100% 59%; /* orange accent rgb(254, 132, 49) */
+    --color-accent: 28 100% 59%;
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground transition-colors duration-300;
   }
 }
-
-@layer components {
-  /* Active state for expense filter buttons: orange background */
-  .filter-toggle-active {
-    @apply bg-orange-500 text-white;
-  }
-
-  .dark .filter-toggle-active {
-    @apply bg-orange-500 text-white;
-  }
-}
-

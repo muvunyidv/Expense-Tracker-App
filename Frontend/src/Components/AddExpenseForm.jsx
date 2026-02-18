@@ -128,7 +128,7 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit, categories = [], ini
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Amount *</label>
+                <label className="block text-sm font-medium mb-2 text-gray-700">Amount (Rwf) *</label>
                 <input 
                   type="number" 
                   name="amount" 
@@ -141,7 +141,7 @@ export function AddExpenseForm({ isOpen, onClose, onSubmit, categories = [], ini
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Date *</label>
+                <label className="block text-sm font-medium mb-2 text-gray-700">Date(DD/MM/YY) *</label>
                 <input 
                   type="date" 
                   name="date" 
