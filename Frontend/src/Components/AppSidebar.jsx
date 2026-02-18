@@ -9,6 +9,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar, 
 } from "./ui/sidebar";
 
 const menuItems = [
@@ -24,9 +25,9 @@ const menuItems = [
   },
 ];
 
-// Added total prop to the sidebar
 export function AppSidebar({ total = 0 }) {
   const [activeHash, setActiveHash] = useState(() => window.location.hash || "#summary");
+  const { isMobile, setOpen } = useSidebar();
 
   useEffect(() => {
     const onHashChange = () => setActiveHash(window.location.hash || "#summary");
@@ -34,23 +35,34 @@ export function AppSidebar({ total = 0 }) {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
+  // Helper to close sidebar after clicking a link on mobile
+  const handleNavigation = () => {
+    if (isMobile) setOpen(false);
+  };
+
   return (
     <Sidebar>
-      {/* justify-between pushes the Total Card to the bottom */}
+     
       <SidebarContent className="justify-between">
         <div>
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-black">Expense Tracker</SidebarGroupLabel>
+          <SidebarGroup className="pt-6">
+            <SidebarGroupLabel className="text-zinc-900 dark:text-black font-bold mb-4 px-2">
+              EXPENSE TRACKER
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {menuItems.map((item) => {
                   const isActive = activeHash === item.url;
                   return (
                     <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild active={isActive}>
-                        <a href={item.url}>
-                          <item.icon className="w-4 h-4" />
-                          <span>{item.title}</span>
+                      <SidebarMenuButton 
+                        asChild 
+                        active={isActive}
+                        onClick={handleNavigation}
+                      >
+                        <a href={item.url} className="flex items-center gap-3">
+                          <item.icon className={`w-4 h-4 ${isActive ? 'text-orange-500' : ''}`} />
+                          <span className="font-medium">{item.title}</span>
                         </a>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -61,21 +73,38 @@ export function AppSidebar({ total = 0 }) {
           </SidebarGroup>
         </div>
 
-        {/* PERSISTENT TOTAL CARD */}
-        <SidebarGroup className="mt-auto mb-4 px-4">
-          <div className="bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 rounded-xl p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-2 text-orange-600 dark:text-orange-400">
-              <Wallet className="w-4 h-4" />
-              <span className="text-[10px] font-bold uppercase tracking-widest">Total Spent</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-black text-zinc-900 dark:text-white truncate">
-                {total.toLocaleString()}
-              </span>
-              <span className="text-[10px] font-bold text-orange-500/80 uppercase">Rwf</span>
+        {/* POLISHED TOTAL BALANCE WIDGET */}
+        <div className="px-4 mb-8">
+          <div className="relative overflow-hidden bg-orange-600 rounded-2xl p-5 shadow-lg transition-transform active:scale-95">
+            {/* Subtle decorative glow */}
+            <div className="absolute -right-2 -top-2 h-16 w-16 rounded-full bg-white/10 blur-xl" />
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="p-1.5 bg-white/20 rounded-lg">
+                  <Wallet className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-[10px] font-bold text-white/90 uppercase tracking-widest">
+                  Total Balance
+                </span>
+              </div>
+              
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-black text-white tracking-tight">
+                  {total.toLocaleString()}
+                </span>
+                <span className="text-[10px] font-bold text-white/60 uppercase">
+                  Rwf
+                </span>
+              </div>
+              
+              {/* Decorative progress detail */}
+              <div className="mt-4 h-1 w-full bg-white/20 rounded-full overflow-hidden">
+                <div className="h-full bg-white/60 w-1/2 rounded-full" />
+              </div>
             </div>
           </div>
-        </SidebarGroup>
+        </div>
       </SidebarContent>
     </Sidebar>
   );
@@ -85,24 +114,29 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="mt-auto py-6 px-8 border-t border-gray-200/60 dark:border-zinc-700/60 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-        <div className="flex items-center gap-2">
-          <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
-          <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-            © {currentYear} <span className="text-black dark:text-white">Expense Tracker.</span> All rights reserved.
+    <footer className="mt-auto py-8 px-6 border-t border-zinc-100 dark:border-zinc-800/50 bg-white dark:bg-zinc-950">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="flex flex-col items-center md:items-start gap-1">
+          <div className="flex items-center gap-2">
+             <div className="h-2 w-2 rounded-full bg-orange-500" />
+             <p className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-tight">
+               Expense Tracker
+             </p>
+          </div>
+          <p className="text-xs text-zinc-500">
+            © {currentYear} All rights reserved. Created for financial clarity.
           </p>
         </div>
 
-        <div className="flex items-center gap-6">
-          <a href="#" className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-orange-500 transition-colors">
-            Privacy Policy
+        <div className="flex items-center gap-8">
+          <a href="#" className="text-xs font-bold text-zinc-500 hover:text-orange-500 uppercase tracking-widest transition-colors">
+            Privacy
           </a>
-          <a href="#" className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-orange-500 transition-colors">
-            Terms of Service
+          <a href="#" className="text-xs font-bold text-zinc-500 hover:text-orange-500 uppercase tracking-widest transition-colors">
+            Terms
           </a>
-          <a href="#" className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-orange-500 transition-colors">
-            Help Center
+          <a href="#" className="text-xs font-bold text-zinc-500 hover:text-orange-500 uppercase tracking-widest transition-colors">
+            Support
           </a>
         </div>
       </div>
