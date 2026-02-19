@@ -134,11 +134,11 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
                 filteredExpenses.map((expense) => (
                   <div 
                     key={expense._id} 
-                    className="flex items-center justify-between py-4 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-zinc-800/20 transition-colors px-2 -mx-2 rounded-lg group"
+                    className="flex items-center justify-between py-4 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-zinc-800/20 transition-colors px-2 -mx-2 rounded-lg"
                     onClick={() => onViewExpense && onViewExpense(expense)}
                   >
                     <div className="flex items-start gap-4">
-                      <div className="mt-1 p-2 bg-muted rounded-lg shrink-0 group-hover:bg-background transition-colors">
+                      <div className="mt-1 p-2 bg-muted rounded-lg shrink-0">
                         {getCategoryIcon(expense.categoryId?.name)}
                       </div>
                       <div>
@@ -161,16 +161,19 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                      {/* Fixed: Removed opacity-0 and group-hover classes so buttons are always visible */}
+                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => onEditExpense && onEditExpense(expense)}
-                          className="p-2 text-muted-foreground hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all"
+                          className="p-2 text-blue-500 bg-blue-50 dark:bg-blue-900/20 rounded-md transition-all hover:scale-105 active:scale-95"
+                          title="Edit"
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => setExpenseToDelete(expense)}
-                          className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-all"
+                          className="p-2 text-red-500 bg-red-50 dark:bg-red-900/20 rounded-md transition-all hover:scale-105 active:scale-95"
+                          title="Delete"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -182,7 +185,6 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
             </div>
           )}
 
-          {/* Restored Original Minimal Footer */}
           <div className="mt-4 pt-4 border-t border-gray-300/60 dark:border-zinc-700/60 flex items-center justify-between">
             <div className="font-semibold text-foreground uppercase text-sm tracking-wider">Total</div>
             <div className="text-xl font-bold text-orange-500">
@@ -198,6 +200,6 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
         onConfirm={confirmDelete}
         itemName={expenseToDelete?.description}
       />
-    </>
+    </> 
   );
 }

@@ -29,7 +29,7 @@ function DashboardContent({ onLogout, user, totalExpenses, searchQuery, setSearc
       
       <SidebarInset>
         <div className="flex-1 flex flex-col">
-          <div className="sticky top-0 z-50 bg-background/95 backdrop-blur shadow-sm border-b border-gray-100">
+          <div className="sticky top-0 z-50 bg-background/95 backdrop-blur shadow-lg border-b/80 border-gray-100">
             <div className="max-w-7xl mx-auto grid grid-cols-3 items-center px-4 md:px-6 py-3">
               <div className="flex items-center gap-2">
                 <span className="md:hidden"><SidebarTrigger /></span>

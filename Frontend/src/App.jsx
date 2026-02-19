@@ -1,28 +1,27 @@
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 import Auth from "./pages/Auth"
 import Dashboard from "./pages/Dashboard"
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [checkedAuth, setCheckedAuth] = useState(false)
+  // 1. Initialize state directly from storage
+  // We check both session and local just in case, but prioritize session
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    const user = sessionStorage.getItem("user");
+    return user !== null;
+  });
 
-  useEffect(() => {
-    const user = localStorage.getItem("user")
-    if (user) setIsAuthenticated(true)
-    setCheckedAuth(true)
-  }, [])
-
+  // 2. Handle Login
   const handleLogin = (userData) => {
-    localStorage.setItem("user", JSON.stringify(userData))
-    setIsAuthenticated(true)
-  }
+    sessionStorage.setItem("user", JSON.stringify(userData));
+    setIsAuthenticated(true);
+  };
 
+  // 3. Handle Logout
   const handleLogout = () => {
-    localStorage.removeItem("user")
-    setIsAuthenticated(false)
-  }
-
-  if (!checkedAuth) return null // optional: show a loader here
+    sessionStorage.removeItem("user");
+    localStorage.removeItem("user"); // Cleanup just in case
+    setIsAuthenticated(false);
+  };
 
   return (
     <>
@@ -32,5 +31,5 @@ export default function App() {
         <Auth onLogin={handleLogin} />
       )}
     </>
-  )
+  );
 }
