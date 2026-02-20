@@ -14,7 +14,7 @@ function Auth({ onLogin }) {
     confirmPassword: "",
     phonenumber: "", 
     loginIdentifier: "",
-    role: "staff", 
+    role: "user", 
     accessCode: "",  
     inviteCode: ""   
   };
@@ -73,7 +73,6 @@ function Auth({ onLogin }) {
 
         if (res.data.token) {
           localStorage.setItem("token", res.data.token);
-          // CRITICAL: Passing user data back to App.jsx
           onLogin(res.data.user); 
         }
       } else {
@@ -83,11 +82,9 @@ function Auth({ onLogin }) {
         });
         
         localStorage.setItem("token", res.data.token);
-        // CRITICAL: Passing user data back to App.jsx
         onLogin(res.data.user);
       }
     } catch (err) {
-      // Improved error handling to catch "next is not a function" or backend crashes
       const errorMsg = err.response?.data?.error || "Connection error. Please try again.";
       setError(errorMsg.toUpperCase());
     } finally {
@@ -114,7 +111,7 @@ function Auth({ onLogin }) {
         <Card className="w-full max-w-md border-none bg-white/95 shadow-2xl backdrop-blur-sm rounded-[2rem] overflow-hidden">
           <CardHeader className="pb-2 pt-8">
             <CardTitle className="text-2xl font-black text-center text-gray-900 uppercase tracking-tighter">
-              {isSignup ? "Join the Team" : "Welcome back"}
+              {isSignup ? "Create Account" : "Welcome back"}
             </CardTitle>
           </CardHeader>
 
@@ -124,98 +121,73 @@ function Auth({ onLogin }) {
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Username</label>
-                      <input name="username" type="text" value={formData.username} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500 transition-all font-bold" placeholder="John" />
+                      <label className="text-[10px] font-normal uppercase text-gray-400 ml-1">Username</label>
+                      <input name="username" type="text" value={formData.username} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500 transition-all font-normal" placeholder="John" />
                     </div>
                     <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Phone</label>
-                      <input name="phonenumber" type="text" value={formData.phonenumber} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500 transition-all font-bold" placeholder="078..." />
+                      <label className="text-[10px] font-normal uppercase text-gray-400 ml-1">Phone</label>
+                      <input name="phonenumber" type="text" value={formData.phonenumber} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500 transition-all font-normal" placeholder="078..." />
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Email Address</label>
-                    <input name="email" type="email" value={formData.email} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500 transition-all font-bold" placeholder="name@example.com" />
+                    <label className="text-[10px] font-normal uppercase text-gray-400 ml-1">Email Address</label>
+                    <input name="email" type="email" value={formData.email} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500 transition-all font-normal" placeholder="name@example.com" />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className={`grid ${formData.role === 'user' ? 'grid-cols-1' : 'grid-cols-2'} gap-3 transition-all`}>
                     <div className="relative">
-                      <label className="text-[10px] font-black uppercase text-gray-400 ml-1">I am a...</label>
+                      <label className="text-[10px] font-normal uppercase text-gray-400 ml-1">Account Type</label>
                       <div className="relative">
                         <select 
                           name="role" 
                           value={formData.role} 
                           onChange={handleChange}
-                          className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500 appearance-none transition-all font-bold cursor-pointer"
+                          className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500 appearance-none transition-all font-normal cursor-pointer"
                         >
-                          <option value="staff">Staff Member</option>
-                          <option value="manager">Manager</option>
+                          <option value="user">Just Me (Personal)</option>
+                          <option value="manager">Manager (Create Team)</option>
+                          <option value="staff">Staff (Join Team)</option>
                         </select>
                         <ChevronDown className="absolute right-3 top-4 w-4 h-4 text-gray-400 pointer-events-none" />
                       </div>
                     </div>
 
-                    {formData.role === "manager" ? (
+                    {formData.role === "manager" && (
                       <div className="animate-in slide-in-from-right-2 duration-300">
-                        <label className="text-[10px] font-black uppercase text-orange-600 ml-1 flex items-center gap-1">
+                        <label className="text-[10px] font-normal uppercase text-orange-600 ml-1 flex items-center gap-1">
                           <ShieldCheck className="w-3 h-3" /> Access Code
                         </label>
-                        <input 
-                          name="accessCode" 
-                          type="password" 
-                          value={formData.accessCode} 
-                          onChange={handleChange} 
-                          className="w-full mt-1 px-4 py-2.5 rounded-xl border border-orange-200 bg-orange-50 text-black outline-none focus:ring-2 focus:ring-orange-500 font-bold" 
-                          placeholder="BOSS2026" 
-                        />
+                        <input name="accessCode" type="password" value={formData.accessCode} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-orange-200 bg-orange-50 text-black outline-none focus:ring-2 focus:ring-orange-500 font-normal" placeholder="BOSS2026" />
                       </div>
-                    ) : (
+                    )}
+
+                    {formData.role === "staff" && (
                       <div className="animate-in slide-in-from-right-2 duration-300">
-                        <label className="text-[10px] font-black uppercase text-blue-600 ml-1 flex items-center gap-1">
+                        <label className="text-[10px] font-normal uppercase text-blue-600 ml-1 flex items-center gap-1">
                           <Users className="w-3 h-3" /> Invite Code
                         </label>
-                        <input 
-                          name="inviteCode" 
-                          type="text" 
-                          value={formData.inviteCode} 
-                          onChange={handleChange} 
-                          className="w-full mt-1 px-4 py-2.5 rounded-xl border border-blue-200 bg-blue-50 text-black outline-none focus:ring-2 focus:ring-blue-500 font-bold" 
-                          placeholder="CODE" 
-                        />
+                        <input name="inviteCode" type="text" value={formData.inviteCode} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-blue-200 bg-blue-50 text-black outline-none focus:ring-2 focus:ring-blue-500 font-normal" placeholder="CODE" />
                       </div>
                     )}
                   </div>
                 </>
               ) : (
                 <div>
-                  <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Email or Phone Number</label>
-                  <input
-                    name="loginIdentifier"
-                    type="text"
-                    placeholder="Enter email or phone"
-                    value={formData.loginIdentifier}
-                    onChange={handleChange}
-                    className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none transition-all font-bold"
-                  />
+                  <label className="text-[10px] font-normal uppercase text-gray-400 ml-1">Email or Phone Number</label>
+                  <input name="loginIdentifier" type="text" placeholder="Enter email or phone" value={formData.loginIdentifier} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none transition-all font-normal" />
                 </div>
               )}
 
               <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Password</label>
-                <input 
-                  name="password" 
-                  type="password" 
-                  placeholder="••••••••" 
-                  value={formData.password} 
-                  onChange={handleChange} 
-                  className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none transition-all font-bold" 
-                />
+                <label className="text-[10px] font-normal uppercase text-gray-400 ml-1">Password</label>
+                <input name="password" type="password" placeholder="••••••••" value={formData.password} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none transition-all font-normal" />
               </div>
 
               {isSignup && (
                 <div>
-                  <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Confirm Password</label>
-                  <input name="confirmPassword" type="password" placeholder="••••••••" value={formData.confirmPassword} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none transition-all font-bold" />
+                  <label className="text-[10px] font-normal uppercase text-gray-400 ml-1">Confirm Password</label>
+                  <input name="confirmPassword" type="password" placeholder="••••••••" value={formData.confirmPassword} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none transition-all font-normal" />
                 </div>
               )}
 
@@ -232,7 +204,7 @@ function Auth({ onLogin }) {
 
             <div className="mt-8 text-center border-t border-gray-100 pt-6">
               <button onClick={toggleAuthMode} className="text-[10px] text-gray-400 hover:text-orange-500 transition-colors tracking-widest font-black uppercase">
-                {isSignup ? "Already have an account? " : "New to the team? "}
+                {isSignup ? "Already have an account? " : "New here? "}
                 <span className="text-orange-500 underline decoration-2 underline-offset-4">{isSignup ? "Login" : "Sign Up"}</span>
               </button>
             </div>

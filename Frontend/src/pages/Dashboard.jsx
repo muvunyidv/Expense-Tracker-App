@@ -13,7 +13,7 @@ import {
   SidebarInset,
   useSidebar,
 } from "../Components/ui/sidebar";
-import { LogOut, PlusCircle, User, ArrowRight, Wallet, ShieldCheck } from "lucide-react";
+import { LogOut, PlusCircle, User, ArrowRight, Wallet, ShieldCheck, UserCircle } from "lucide-react";
 
 // Sub-component for the main dashboard layout
 function DashboardContent({ 
@@ -24,10 +24,10 @@ function DashboardContent({
 }) {
   
   const { isMobile, openMobile } = useSidebar();
+  const isPersonalUser = user?.role === "user";
 
   return (
     <div className="flex min-h-screen w-full relative">
-      {/* Pass the real user object here to fix the Sidebar labels */}
       <AppSidebar total={totalExpenses} variant="inset" user={user} /> 
       
       <SidebarInset>
@@ -48,17 +48,23 @@ function DashboardContent({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search your records..."
+                  placeholder={isPersonalUser ? "Search your spending..." : "Search team records..."}
                   className="w-full px-4 py-2 rounded-full border border-border bg-muted/50 focus:bg-background focus:ring-2 focus:ring-orange-500 outline-none transition-all text-sm font-medium"
                 />
               </div>
 
               <div className="flex items-center gap-3 justify-self-end relative" ref={menuRef}>
-                {/* ROLE BADGE: Shows if the user is a manager */}
-                {user?.role === "manager" && !isMobile && (
-                  <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full border border-blue-200 dark:border-blue-800 animate-in fade-in zoom-in-90">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span className="text-[10px] font-black uppercase tracking-tight">Manager</span>
+                {/* ROLE BADGE: Dynamic per role */}
+                {!isMobile && (
+                  <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border animate-in fade-in zoom-in-90 ${
+                    user?.role === "manager" 
+                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800" 
+                    : "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-800"
+                  }`}>
+                    {user?.role === "manager" ? <ShieldCheck className="w-3.5 h-3.5" /> : <UserCircle className="w-3.5 h-3.5" />}
+                    <span className="text-[10px] font-black uppercase tracking-tight">
+                      {isPersonalUser ? "Personal Account" : user?.role}
+                    </span>
                   </div>
                 )}
 
@@ -72,7 +78,7 @@ function DashboardContent({
                 {isUserMenuOpen && (
                   <div className="absolute right-0 top-full mt-3 w-64 rounded-xl border border-border shadow-2xl p-2 animate-in fade-in zoom-in-95 duration-100 z-[999] bg-white dark:bg-[#1c1c1c]">
                     <div className="px-4 py-3 border-b border-border/50 mb-1">
-                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-black uppercase tracking-widest">Account</p>
+                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-black uppercase tracking-widest">Account Type</p>
                       <p className="text-sm font-bold truncate mt-0.5 text-zinc-900 dark:text-white capitalize">{user?.username || 'User'}</p>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate font-medium">{user?.email}</p>
                     </div>
@@ -114,7 +120,7 @@ function DashboardContent({
                       }`}
                     >
                       <PlusCircle className="w-5 h-5" />
-                      Add Personal Expense
+                      {isPersonalUser ? "Add New Expense" : "Add Team Expense"}
                     </button>
                   </div>
 
@@ -127,7 +133,7 @@ function DashboardContent({
                   {categories.length === 0 && (
                     <div className="text-center py-8 bg-muted/20 rounded-2xl border border-dashed border-border animate-in fade-in duration-700">
                       <p className="text-sm text-muted-foreground font-medium">
-                        You need to create categories first.{" "}
+                        {isPersonalUser ? "Start by setting up your spending categories." : "You need to create categories for your team first."}{" "}
                         <a href="#categories" className="text-orange-500 font-black hover:underline inline-flex items-center gap-0.5">
                           Set up categories <ArrowRight className="w-3.5 h-3.5" />
                         </a>
@@ -148,7 +154,9 @@ function DashboardContent({
           <div className="flex items-center gap-3 px-6 py-3 bg-zinc-900/95 dark:bg-orange-600 text-white rounded-2xl shadow-2xl border border-white/10 backdrop-blur-md">
             <Wallet className="w-5 h-5 text-white/80" />
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold uppercase tracking-wider opacity-70">Personal Total</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider opacity-70">
+                {isPersonalUser ? "Total Spent" : "Team Total"}
+              </span>
               <span className="text-base font-black tracking-tight">
                 {totalExpenses.toLocaleString()} <span className="text-[10px]">Rwf</span>
               </span>
@@ -167,20 +175,17 @@ export default function Dashboard({ onLogout, user: initialUser }) {
   const [viewingExpense, setViewingExpense] = useState(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   
-  // Use user from props or fall back to local fetch
   const [user, setUser] = useState(initialUser);
-  
   const [currentPage, setCurrentPage] = useState(() => window.location.hash || "#summary");
   const [searchQuery, setSearchQuery] = useState("");
   const [categories, setCategories] = useState([]);
   const [totalExpenses, setTotalExpenses] = useState(0); 
   const menuRef = useRef(null);
 
+  const isPersonalUser = user?.role === "user";
+
   useEffect(() => {
-    // If App.jsx didn't have the user yet (refresh), fetch it now
-    if (!user) {
-      fetchUserData();
-    }
+    if (!user) { fetchUserData(); }
 
     const onHashChange = () => {
       setCurrentPage(window.location.hash || "#summary");
@@ -211,10 +216,8 @@ export default function Dashboard({ onLogout, user: initialUser }) {
     try {
       const res = await API.get("/auth/me");
       setUser(res.data);
-      // Sync localstorage for App.jsx to pick up on next refresh
       localStorage.setItem("user", JSON.stringify(res.data));
     } catch (err) {
-      console.error("Auth failed", err);
       if (err.response?.status === 401) onLogout();
     }
   };
@@ -224,9 +227,7 @@ export default function Dashboard({ onLogout, user: initialUser }) {
       const res = await API.get("/expenses");
       const total = res.data.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
       setTotalExpenses(total);
-    } catch (err) {
-      console.error("Failed to fetch total", err);
-    }
+    } catch (err) {}
   };
 
   const fetchCategories = async () => {
@@ -257,14 +258,24 @@ export default function Dashboard({ onLogout, user: initialUser }) {
     }
   };
 
+  // DYNAMIC PAGE CONTENT BASED ON ROLE
   const { title, description } = (function getPageTitle() {
     switch (currentPage) {
       case "#categories":
-        return { title: "Categories", description: "Organize your spending habits" };
+        return { 
+          title: "Categories", 
+          description: isPersonalUser ? "How you group your personal spending" : "Organize team spending habits" 
+        };
       case "#plans":
-        return { title: "Work Requirements", description: "Submit and track budget approvals" };
+        return { 
+          title: isPersonalUser ? "Budget Plans" : "Work Requirements", 
+          description: isPersonalUser ? "Future spending goals" : "Submit and track budget approvals" 
+        };
       default:
-        return { title: "My Dashboard", description: "Overview of your personal and approved work spending" };
+        return { 
+          title: isPersonalUser ? "My Spending" : "Management Dashboard", 
+          description: isPersonalUser ? "Track your personal finances here" : "Overview of team and approved spending" 
+        };
     }
   })();
 

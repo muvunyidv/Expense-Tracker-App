@@ -7,31 +7,34 @@ const mongoose = require('mongoose');
 const router = express.Router();
 
 // Register
-// Added 'next' parameter to prevent "next is not a function" errors
 router.post('/register', async (req, res, next) => {
   try {
     const { email, phonenumber, username, password, role, inviteCode } = req.body;
 
+    // Basic validation
     if (!email || !phonenumber || !username || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    // 1. Check if user already exists
+    // 1. Check if user already exists (Check all unique fields)
     const existingUser = await User.findOne({ 
-      $or: [{ email: email.toLowerCase() }, { username }, { phonenumber }] 
+      $or: [
+        { email: email.toLowerCase() }, 
+        { username: username }, 
+        { phonenumber: phonenumber }
+      ] 
     });
     
     if (existingUser) {
-      return res.status(409).json({ error: 'Email, Username, or Phone already in use' });
+      return res.status(409).json({ error: 'Email, Username, or Phone number already in use' });
     }
 
-    let finalTenantId;
+    let assignedRole = role || 'user';
+    let finalTenantId = undefined;
 
-    if (role === 'manager') {
-      // MANAGER: Generate a completely new unique Silo ID
-      finalTenantId = new mongoose.Types.ObjectId().toString();
-    } else {
-      // STAFF: Must provide an invite code to find their Manager's Silo
+    // 2. Role-based logic for Tenant/Silo
+    if (assignedRole === 'staff') {
+      // STAFF: Must provide an invite code to inherit a Manager's Silo
       if (!inviteCode) {
         return res.status(400).json({ error: 'An invite code is required to join a team' });
       }
@@ -42,25 +45,29 @@ router.post('/register', async (req, res, next) => {
       });
 
       if (!manager) {
-        return res.status(404).json({ error: 'Invalid invite code. Check with your manager.' });
+        return res.status(404).json({ error: 'Invalid invite code. Please check with your manager.' });
       }
       
-      finalTenantId = manager.tenantId; // Inherit the group ID
-    }
+      finalTenantId = manager.tenantId; // Inherit the manager's silo ID
+    } 
+    // NOTE: For 'manager' and 'user', finalTenantId stays undefined here.
+    // The User Model pre-save hook will automatically set tenantId = user._id.
 
-    // 2. Create the User
+    // 3. Create the User instance
     const user = new User({ 
       email: email.toLowerCase(), 
       phonenumber, 
       username, 
       password, 
-      role: role || 'staff',
+      role: assignedRole,
       tenantId: finalTenantId
     });
     
+    // The .save() call triggers the pre-save hook in models/User.js
     await user.save();
 
-    // 3. Generate Token (Including tenantId for the silo logic)
+    // 4. Generate JWT Token
+    // We use the freshly saved user data (including the auto-generated tenantId)
     const token = jwt.sign(
       { 
         id: user._id, 
@@ -72,18 +79,20 @@ router.post('/register', async (req, res, next) => {
       { expiresIn: '24h' }
     );
 
-    // 4. Respond
+    // 5. Success Response
+    let successMessage = 'Account created successfully!';
+    if (user.role === 'manager') successMessage = `Team created! Your invite code is ${user.inviteCode}`;
+    if (user.role === 'staff') successMessage = 'Successfully joined the team!';
+
     res.status(201).json({ 
       user: user.toJSON(), 
       token,
-      message: role === 'manager' 
-        ? `Account created! Your invite code is ${user.inviteCode}` 
-        : 'Successfully joined the team!'
+      message: successMessage
     });
 
   } catch (error) {
     console.error("Registration Error:", error);
-    // Directly send response to avoid 'next' confusion if middleware isn't setup
+    // Handle Mongoose validation errors specifically if needed
     res.status(500).json({ error: error.message });
   }
 });
@@ -97,6 +106,7 @@ router.post('/login', async (req, res, next) => {
       return res.status(400).json({ error: 'Identifier and password are required' });
     }
 
+    // Support login via email or phone number
     const user = await User.findOne({
       $or: [
         { email: identifier.toLowerCase() }, 
@@ -126,6 +136,7 @@ router.post('/login', async (req, res, next) => {
   }
 });
 
+// Get Current User Profile
 router.get('/me', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);

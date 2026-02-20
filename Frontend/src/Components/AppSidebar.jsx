@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Tags, Wallet, ClipboardList, Users, Copy, Check, UserCircle, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Tags, Wallet, ClipboardList, Users, Copy, Check, UserCircle, ShieldCheck, User } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -42,6 +42,7 @@ export function AppSidebar({ total = 0, user = {} }) {
   };
 
   const isManager = user?.role === "manager";
+  const isPersonalUser = user?.role === "user";
 
   return (
     <Sidebar className="border-r border-zinc-200 bg-white">
@@ -52,11 +53,11 @@ export function AppSidebar({ total = 0, user = {} }) {
               EXPENSE<span className="text-orange-500">.</span>TRK
             </SidebarGroupLabel>
 
-            {/* IDENTITY CARD - Consistent Orange Theme */}
+            {/* IDENTITY CARD */}
             <div className="px-2 mb-8">
               <div className="flex items-center gap-3 p-3 rounded-2xl border border-orange-100 bg-orange-50/50 transition-all">
                 <div className="h-11 w-11 rounded-xl flex items-center justify-center text-white shadow-lg bg-orange-500 shadow-orange-200">
-                  {isManager ? <ShieldCheck className="w-6 h-6" /> : <UserCircle className="w-6 h-6" />}
+                  {isManager ? <ShieldCheck className="w-6 h-6" /> : isPersonalUser ? <User className="w-6 h-6" /> : <UserCircle className="w-6 h-6" />}
                 </div>
                 <div className="overflow-hidden">
                   <p className="text-sm font-black text-zinc-900 truncate uppercase tracking-tight">
@@ -65,7 +66,7 @@ export function AppSidebar({ total = 0, user = {} }) {
                   <div className="flex items-center gap-1">
                     <div className="w-1.5 h-1.5 rounded-full animate-pulse bg-orange-500" />
                     <p className="text-[10px] font-black uppercase tracking-widest text-orange-600">
-                      {user?.role || "Staff"}
+                      {isPersonalUser ? "Personal" : user?.role || "Staff"}
                     </p>
                   </div>
                 </div>
@@ -107,7 +108,7 @@ export function AppSidebar({ total = 0, user = {} }) {
           </SidebarGroup>
 
           <div className="mt-auto p-4 space-y-4">
-            {/* RECRUIT STAFF - Orange Branding */}
+            {/* RECRUIT STAFF - Hidden for Normal Users */}
             {isManager && user?.inviteCode && (
               <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-4 shadow-lg shadow-orange-100 animate-in slide-in-from-left duration-500">
                 <div className="flex items-center gap-2 mb-3">
@@ -129,7 +130,7 @@ export function AppSidebar({ total = 0, user = {} }) {
               </div>
             )}
 
-            {/* TOTAL WIDGET - Updated to Orange Branding */}
+            {/* TOTAL WIDGET */}
             <div className="relative overflow-hidden rounded-2xl p-5 shadow-xl bg-orange-600 shadow-orange-500/30 active:scale-95 transition-all">
               <div className="absolute -right-2 -top-2 h-16 w-16 rounded-full bg-white/10 blur-xl" />
               
@@ -139,7 +140,7 @@ export function AppSidebar({ total = 0, user = {} }) {
                     <Wallet className="w-4 h-4 text-white" />
                   </div>
                   <span className="text-[10px] font-black text-white/90 uppercase tracking-widest">
-                    {isManager ? "Organization Total" : "My Total Expenses"}
+                    {isManager ? "Organization Total" : isPersonalUser ? "Total Spent" : "My Total Expenses"}
                   </span>
                 </div>
                 
@@ -172,7 +173,7 @@ export function Footer() {
              </p>
           </div>
           <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-            © {currentYear} • GROUP FINANCIAL MANAGEMENT
+            © {currentYear} • { "PERSONAL & GROUP FINANCIAL MANAGEMENT" }
           </p>
         </div>
 

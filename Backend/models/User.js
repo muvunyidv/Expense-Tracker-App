@@ -27,58 +27,70 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['staff', 'manager'],
-    default: 'staff'
+    enum: ['staff', 'manager', 'user'], 
+    default: 'user'
   },
-  // THE SILO: Linked to the Manager's unique ID
+  /**
+   * THE SILO:
+   * Used to isolate data. For 'user' and 'manager', this defaults to their own _id.
+   * For 'staff', this is inherited from their manager during registration.
+   */
   tenantId: {
     type: String,
-    required: true,
     index: true 
   },
-  // THE KEY: Generated for Managers, used by Staff to join
+  /**
+   * THE KEY:
+   * Sparse allows multiple null values for 'user' and 'staff' 
+   * while maintaining uniqueness for 'manager' codes.
+   */
   inviteCode: {
     type: String,
     unique: true,
-    sparse: true // Essential: allows null for staff while keeping uniqueness for managers
+    sparse: true 
   }
 }, { timestamps: true });
 
 /**
  * PRE-SAVE HOOK
- * Cleaned up 'next' usage. In async hooks, simply allowing the function 
- * to complete acts as 'next()'. Throwing an error acts as 'next(err)'.
+ * Handles password hashing and dynamic Silo (tenantId) assignment.
+ * Using async function without 'next' to avoid Mongoose middleware conflicts.
  */
 userSchema.pre('save', async function () {
   try {
-    // 1. Hash password if it's new or being changed
+    // 1. Hash password if it's new or modified
     if (this.isModified('password')) {
       const salt = await bcrypt.genSalt(10);
       this.password = await bcrypt.hash(this.password, salt);
     }
 
-    // 2. Generate Invite Code only for Managers if they don't have one
+    // 2. Set tenantId for Normal Users and Managers
+    // If they are not 'staff', they are the "owner" of their own data silo.
+    if ((this.role === 'user' || this.role === 'manager') && !this.tenantId) {
+      this.tenantId = this._id.toString();
+    }
+
+    // 3. Generate Invite Code ONLY for Managers
     if (this.role === 'manager' && !this.inviteCode) {
-      // Generates a 6-character random hex code (e.g., "F3A2B1")
+      // Generates a 6-character readable hex code (e.g., A1B2C3)
       this.inviteCode = crypto.randomBytes(3).toString('hex').toUpperCase(); 
     }
+    
+    // In async hooks, you don't call next(). Returning is enough.
   } catch (error) {
-    // Throwing here correctly passes the error to the .save().catch() or route catch block
-    throw error;
+    throw error; // Re-throw to be caught by the route's catch block
   }
 });
 
 /**
  * VERIFY PASSWORD
- * Standard async method for login comparison
  */
 userSchema.methods.verifyPassword = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 
 /**
- * SECURITY: toJSON
- * Ensures sensitive data like passwords are never sent to the frontend
+ * SECURITY: Remove sensitive data before sending to frontend
  */
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();

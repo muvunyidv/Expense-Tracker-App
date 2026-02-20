@@ -4,10 +4,20 @@ const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
 
-// GET all categories for the shared group (Home or Company)
+/**
+ * PERMISSION CHECK UTILITY
+ * Managers and Personal Users can manage categories.
+ * Staff can only view them.
+ */
+const canManageCategory = (role) => {
+  return role === 'manager' || role === 'user';
+};
+
+// GET all categories
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    // Filter by tenantId so everyone in the silo sees the same categories
+    // Filter by tenantId ensures Personal Users see their own 
+    // and Team members see their group's categories.
     const categories = await Category.find({ tenantId: req.user.tenantId }).sort({ name: 1 });
     res.json(categories);
   } catch (error) {
@@ -32,12 +42,12 @@ router.get('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// POST Create category (Manager/Owner Only)
+// POST Create category
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    // Optional: Only allow Managers/Owners to define categories to keep things organized
-    if (req.user.role !== 'manager') {
-      return res.status(403).json({ error: 'Only Managers or Home Owners can create categories' });
+    // UPDATED: Allow both Managers and Personal Users
+    if (!canManageCategory(req.user.role)) {
+      return res.status(403).json({ error: 'Staff members cannot create categories' });
     }
 
     const { name, description } = req.body;
@@ -47,8 +57,8 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 
     const category = new Category({
-      tenantId: req.user.tenantId, // Linked to the shared group
-      createdBy: req.user.id,      // Keep track of who made it
+      tenantId: req.user.tenantId, 
+      createdBy: req.user.id,      
       name: name.trim(),
       description
     });
@@ -57,7 +67,7 @@ router.post('/', authMiddleware, async (req, res) => {
     res.status(201).json(category);
   } catch (error) {
     if (error.code === 11000) {
-      return res.status(409).json({ error: 'This category already exists in your group' });
+      return res.status(409).json({ error: 'This category already exists in your workspace' });
     }
     res.status(500).json({ error: error.message });
   }
@@ -66,8 +76,9 @@ router.post('/', authMiddleware, async (req, res) => {
 // PUT Update category
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'manager') {
-      return res.status(403).json({ error: 'Access denied' });
+    // UPDATED: Allow both Managers and Personal Users
+    if (!canManageCategory(req.user.role)) {
+      return res.status(403).json({ error: 'Access denied: Staff cannot edit categories' });
     }
 
     const { name, description } = req.body;
@@ -90,8 +101,9 @@ router.put('/:id', authMiddleware, async (req, res) => {
 // DELETE category
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'manager') {
-      return res.status(403).json({ error: 'Access denied' });
+    // UPDATED: Allow both Managers and Personal Users
+    if (!canManageCategory(req.user.role)) {
+      return res.status(403).json({ error: 'Access denied: Staff cannot delete categories' });
     }
 
     const category = await Category.findOneAndDelete({ 

@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { Coffee, Home, ShoppingBag, Car, Utensils, Smartphone, Trash2, Loader2, Pencil } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
+import { Coffee, Home, ShoppingBag, Car, Utensils, Smartphone, Trash2, Loader2, Pencil, User } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { DeleteConfirmModal } from "./DeleteConfirmModal";
 import API from "../api";
 
-// HELPER: Custom Date Formatter
+// HELPER: Custom Date Formatter (e.g., 12/Feb/2026)
 const formatDate = (dateString) => {
   if (!dateString) return "";
   const date = new Date(dateString);
@@ -15,11 +15,8 @@ const formatDate = (dateString) => {
   }).format(date).replace(/ /g, '/');
 };
 
-// HELPER: Robust icon picker
-const getCategoryIcon = (categoryData) => {
-  const categoryName = typeof categoryData === 'object' ? categoryData?.name : categoryData;
-  const name = (categoryName || "").toLowerCase();
-
+const getCategoryIcon = (categoryName = "") => {
+  const name = categoryName.toLowerCase();
   if (name.includes("food") || name.includes("dining")) return <Utensils className="w-5 h-5 text-orange-500" />;
   if (name.includes("transport") || name.includes("car")) return <Car className="w-5 h-5 text-orange-500" />;
   if (name.includes("entertainment") || name.includes("coffee")) return <Coffee className="w-5 h-5 text-orange-500" />;
@@ -38,14 +35,11 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
   const fetchExpenses = async () => {
     try {
       setLoading(true);
-      // CLEANUP: We no longer fetch /plans here. 
-      // Approved plans are already converted to real expenses by the backend.
-      const response = await API.get("/expenses");
-      
-      const sorted = (response.data || []).sort(
+      const res = await API.get("/expenses");
+      // Sort by date descending (newest first)
+      const sorted = (res.data || []).sort(
         (a, b) => new Date(b.date) - new Date(a.date)
       );
-
       setRecentExpenses(sorted);
     } catch (error) {
       console.error("Failed to load expenses:", error);
@@ -63,12 +57,9 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
   const confirmDelete = async () => {
     if (!expenseToDelete) return;
     try {
-      // Direct deletion from expenses collection
       await API.delete(`/expenses/${expenseToDelete._id}`);
-      
       setRecentExpenses(prev => prev.filter(expense => expense._id !== expenseToDelete._id));
       setExpenseToDelete(null);
-      // Notify other components (like Dashboard totals)
       window.dispatchEvent(new Event("expensesUpdated"));
     } catch (error) {
       console.error("Failed to delete expense:", error);
@@ -76,7 +67,11 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
   };
 
   const filteredExpenses = recentExpenses.filter((expense) => {
-    const matchesSearch = expense.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    // FUNCTIONALITY: Matches description OR the username of the person who recorded it
+    const matchesSearch = 
+        expense.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        expense.recordedBy?.username?.toLowerCase().includes(searchQuery.toLowerCase());
+    
     if (!matchesSearch) return false;
 
     const expenseDate = new Date(expense.date);
@@ -107,7 +102,7 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
       <Card className="border-gray-300/60 dark:border-zinc-700/60">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <CardTitle>My Expenses</CardTitle>
+            <CardTitle>Recent Expenses</CardTitle>
             <div className="flex gap-1 bg-muted/50 p-1 rounded-xl w-fit">
               {["all", "today", "weekly", "monthly"].map((t) => (
                 <button
@@ -129,7 +124,7 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
           {loading ? (
             <div className="flex flex-col items-center justify-center p-12 space-y-4">
               <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
-              <p className="text-sm text-muted-foreground font-medium">Loading your records...</p>
+              <p className="text-sm text-muted-foreground font-medium">Fetching expenses...</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-300/60 dark:divide-zinc-700/60">
@@ -138,67 +133,70 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
                   <div className="bg-muted/50 p-4 rounded-full mb-4">
                     <ShoppingBag className="w-10 h-10 text-muted-foreground/40" />
                   </div>
-                  <h3 className="text-lg font-medium text-foreground">No records here</h3>
+                  <h3 className="text-lg font-medium text-foreground">No expenses found</h3>
                   <p className="text-sm text-muted-foreground max-w-[200px] mx-auto mt-1">
-                    Your personal and approved work expenses will appear here.
+                    Try adjusting your filters or search query.
                   </p>
                 </div>
               ) : (
-                filteredExpenses.map((expense) => {
-                  const catName = typeof expense.categoryId === 'object' 
-                    ? expense.categoryId?.name 
-                    : expense.categoryId;
-
-                  return (
-                    <div 
-                      key={expense._id} 
-                      className="flex items-center justify-between py-4 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-zinc-800/20 transition-colors px-2 -mx-2 rounded-lg"
-                      onClick={() => onViewExpense && onViewExpense(expense)}
-                    >
-                      <div className="flex items-start gap-4">
-                        <div className="mt-1 p-2 bg-muted rounded-lg shrink-0">
-                          {getCategoryIcon(expense.categoryId)}
+                filteredExpenses.map((expense) => (
+                  <div 
+                    key={expense._id} 
+                    className="flex items-center justify-between py-4 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-zinc-800/20 transition-colors px-2 -mx-2 rounded-lg"
+                    onClick={() => onViewExpense && onViewExpense(expense)}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="mt-1 p-2 bg-muted rounded-lg shrink-0">
+                        {getCategoryIcon(expense.categoryId?.name)}
+                      </div>
+                      <div>
+                        <div className="font-bold text-foreground capitalize">
+                          {expense.description}
                         </div>
-                        <div>
-                          <div className="font-bold text-foreground">
-                            {expense.description}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            <span className="font-semibold text-orange-500/80">
-                              {catName || "General"}
-                            </span>
-                            {" • "}{formatDate(expense.date)}
-                          </div>
+                        <div className="text-xs text-muted-foreground">
+                          <span className="font-semibold text-orange-500/80">
+                            {expense.categoryId?.name || "Uncategorized"}
+                          </span>
+                          {" • "}{formatDate(expense.date)}
+                        </div>
+                        {/* FUNCTIONALITY: Show the member who recorded it (Role-based UI) */}
+                        {expense.recordedBy?.username && (
+                           <div className="flex items-center gap-1 mt-1 opacity-70">
+                              <User className="w-3 h-3 text-muted-foreground" />
+                              <span className="text-[10px] font-medium uppercase tracking-tight">
+                                {expense.recordedBy.username}
+                              </span>
+                           </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <div className="font-bold text-foreground">
+                          {expense.amount.toLocaleString()} <span className="text-[10px] text-muted-foreground">Rwf</span>
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <div className="font-bold text-foreground text-sm sm:text-base">
-                            {expense.amount.toLocaleString()} <span className="text-[10px] text-muted-foreground">Rwf</span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={() => onEditExpense && onEditExpense(expense)}
-                            className="p-2 text-blue-500 bg-blue-50 dark:bg-blue-900/20 rounded-md transition-all hover:scale-105 active:scale-95"
-                            title="Edit"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setExpenseToDelete(expense)}
-                            className="p-2 text-red-500 bg-red-50 dark:bg-red-900/20 rounded-md transition-all hover:scale-105 active:scale-95"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => onEditExpense && onEditExpense(expense)}
+                          className="p-2 text-blue-500 bg-blue-50 dark:bg-blue-900/20 rounded-md transition-all hover:scale-105 active:scale-95"
+                          title="Edit"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setExpenseToDelete(expense)}
+                          className="p-2 text-red-500 bg-red-50 dark:bg-red-900/20 rounded-md transition-all hover:scale-105 active:scale-95"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
-                  );
-                })
+                  </div>
+                ))
               )}
             </div>
           )}
