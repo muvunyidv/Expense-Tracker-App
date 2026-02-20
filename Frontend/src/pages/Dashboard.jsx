@@ -5,26 +5,27 @@ import { AppSidebar, Footer } from "../Components/AppSidebar";
 import { AddExpenseForm } from "../Components/AddExpenseForm";
 import { ExpenseViewModal } from "../Components/ExpenseViewModal";
 import { Categories } from "./Categories";
+import { PlanList } from "../Components/PlanList"; 
 import API from "../api";
 import {
   SidebarProvider,
   SidebarTrigger,
   SidebarInset,
-  useSidebar, // Import the hook to detect sidebar state
+  useSidebar,
 } from "../Components/ui/sidebar";
-import { LogOut, PlusCircle, User, ArrowRight, Wallet } from "lucide-react";
+import { LogOut, PlusCircle, User, ArrowRight, Wallet, ClipboardList } from "lucide-react";
 
-// Separate the content to use the useSidebar hook properly
-function DashboardContent({ onLogout, user, totalExpenses, searchQuery, setSearchQuery, categories, currentPage, title, description, handleOpenAddForm, handleEditClick, handleViewClick, fetchCategories, handleLogout, menuRef, isUserMenuOpen, setIsUserMenuOpen, userInitial }) {
+function DashboardContent({ 
+  onLogout, user, totalExpenses, searchQuery, setSearchQuery, 
+  categories, currentPage, title, description, handleOpenAddForm, 
+  handleEditClick, handleViewClick, fetchCategories, handleLogout, 
+  menuRef, isUserMenuOpen, setIsUserMenuOpen, userInitial 
+}) {
   
-  // This hook detects if the mobile sidebar is currently slid open
   const { isMobile, openMobile } = useSidebar();
 
   return (
     <div className="flex min-h-screen w-full relative">
-      {/* PROFESSIONAL TOUCH: variant="inset" or "floating" usually handles 
-          the off-canvas overlay better in modern UI kits.
-      */}
       <AppSidebar total={totalExpenses} variant="inset" /> 
       
       <SidebarInset>
@@ -35,7 +36,7 @@ function DashboardContent({ onLogout, user, totalExpenses, searchQuery, setSearc
                 <span className="md:hidden"><SidebarTrigger /></span>
                 <a href="#summary" className="hidden md:flex items-center gap-2">
                   <span className="inline-block h-6 w-6 rounded-md bg-orange-500 shadow-sm shadow-orange-500/50" />
-                  <span className="text-lg font-bold tracking-tight">Expense Tracker</span>
+                  <span className="text-lg font-bold tracking-tight text-foreground">Expense Tracker</span>
                 </a>
               </div>
               
@@ -44,7 +45,7 @@ function DashboardContent({ onLogout, user, totalExpenses, searchQuery, setSearc
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search expenses..."
+                  placeholder="Search..."
                   className="w-full px-4 py-2 rounded-full border border-border bg-muted/50 focus:bg-background focus:ring-2 focus:ring-orange-500 outline-none transition-all text-sm"
                 />
               </div>
@@ -58,7 +59,7 @@ function DashboardContent({ onLogout, user, totalExpenses, searchQuery, setSearc
                 </button>
 
                 {isUserMenuOpen && (
-                  <div className="absolute right-0 top-full mt-3 w-64 rounded-xl border border-border shadow-2xl p-2 animate-in fade-in zoom-in-95 duration-100 z-[999] bg-white dark:bg-[#1c1c1c] opacity-100">
+                  <div className="absolute right-0 top-full mt-3 w-64 rounded-xl border border-border shadow-2xl p-2 animate-in fade-in zoom-in-95 duration-100 z-[999] bg-white dark:bg-[#1c1c1c]">
                     <div className="px-4 py-3 border-b border-border/50 mb-1">
                       <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-widest">Account</p>
                       <p className="text-sm font-bold truncate mt-0.5 text-zinc-900 dark:text-white">{user?.username || 'User'}</p>
@@ -80,13 +81,19 @@ function DashboardContent({ onLogout, user, totalExpenses, searchQuery, setSearc
 
           <div className="flex-1 bg-background p-6">
             <div className="max-w-7xl mx-auto space-y-6">
-              {currentPage !== "#categories" && (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-                    <p className="text-muted-foreground mt-1">{description}</p>
-                  </div>
-                  {currentPage === "#summary" && (
+              
+              {/* Dynamic Page Rendering */}
+              {currentPage === "#categories" ? (
+                <Categories onCategoriesChange={fetchCategories} />
+              ) : currentPage === "#plans" ? (
+                <PlanList /> 
+              ) : (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+                      <p className="text-muted-foreground mt-1">{description}</p>
+                    </div>
                     <button 
                       onClick={handleOpenAddForm}
                       disabled={categories.length === 0}
@@ -99,30 +106,25 @@ function DashboardContent({ onLogout, user, totalExpenses, searchQuery, setSearc
                       <PlusCircle className="w-5 h-5" />
                       Add Expense
                     </button>
+                  </div>
+
+                  <ExpenseList 
+                    searchQuery={searchQuery} 
+                    onEditExpense={handleEditClick}
+                    onViewExpense={handleViewClick} 
+                  />
+
+                  {categories.length === 0 && (
+                    <div className="text-center py-4 animate-in fade-in duration-700">
+                      <p className="text-sm text-muted-foreground">
+                        You need to create categories first.{" "}
+                        <a href="#categories" className="text-orange-500 font-semibold hover:text-orange-600 transition-colors inline-flex items-center gap-0.5">
+                          Create a category <ArrowRight className="w-3.5 h-3.5" />
+                        </a>
+                      </p>
+                    </div>
                   )}
-                </div>
-              )}
-
-              {/* Page Content */}
-              {currentPage === "#categories" ? (
-                <Categories onCategoriesChange={fetchCategories} />
-              ) : (
-                <ExpenseList 
-                  searchQuery={searchQuery} 
-                  onEditExpense={handleEditClick}
-                  onViewExpense={handleViewClick} 
-                />
-              )}
-
-              {currentPage === "#summary" && categories.length === 0 && (
-                <div className="text-center py-4 animate-in fade-in duration-700">
-                  <p className="text-sm text-muted-foreground">
-                    You need to create categories first.{" "}
-                    <a href="#categories" className="text-orange-500 font-semibold hover:text-orange-600 transition-colors inline-flex items-center gap-0.5">
-                      Create a category <ArrowRight className="w-3.5 h-3.5" />
-                    </a>
-                  </p>
-                </div>
+                </>
               )}
             </div>
           </div>
@@ -130,9 +132,6 @@ function DashboardContent({ onLogout, user, totalExpenses, searchQuery, setSearc
         <Footer />
       </SidebarInset>
 
-      {/* CLEANER MOBILE UX: 
-          Only show the pill if we are on mobile AND the sidebar is CLOSED.
-      */}
       {isMobile && !openMobile && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex items-center gap-3 px-5 py-3 bg-zinc-900/95 dark:bg-orange-600 text-white rounded-2xl shadow-2xl border border-white/10 backdrop-blur-md">
@@ -152,7 +151,6 @@ function DashboardContent({ onLogout, user, totalExpenses, searchQuery, setSearc
   );
 }
 
-// Main Wrapper
 export default function Dashboard({ onLogout }) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
@@ -215,7 +213,7 @@ export default function Dashboard({ onLogout }) {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    sessionStorage.removeItem("user");
     if (typeof onLogout === "function") onLogout();
   };
 
@@ -238,6 +236,8 @@ export default function Dashboard({ onLogout }) {
     switch (currentPage) {
       case "#categories":
         return { title: "Categories", description: "Manage your expense categories" };
+      case "#plans":
+        return { title: "Future Plans", description: "Draft requirements for approval" };
       default:
         return { title: "Expense Tracker", description: "Track and manage your expenses" };
     }

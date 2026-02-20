@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Tags, Wallet } from "lucide-react";
+import { LayoutDashboard, Tags, Wallet , ClipboardList } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -23,6 +23,11 @@ const menuItems = [
     icon: Tags,
     url: "#categories",
   },
+   {
+    title: "Plans",
+    icon: ClipboardList,
+    url: "#plans",
+  },
 ];
 
 export function AppSidebar({ total = 0 }) {
@@ -35,7 +40,7 @@ export function AppSidebar({ total = 0 }) {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
-  // Helper to close sidebar after clicking a link on mobile
+  
   const handleNavigation = () => {
     if (isMobile) setOpen(false);
   };
