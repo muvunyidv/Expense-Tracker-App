@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { ChevronDown, ShieldCheck } from "lucide-react"; // Added icons
+import { ChevronDown, ShieldCheck, Users } from "lucide-react"; 
 import AuthBack from "../assets/Auth-Back.jpg";
 import API from "../api";
 
@@ -14,8 +14,9 @@ function Auth({ onLogin }) {
     confirmPassword: "",
     phonenumber: "", 
     loginIdentifier: "",
-    role: "staff", // Default role
-    accessCode: ""  // For Manager verification
+    role: "staff", 
+    accessCode: "",  
+    inviteCode: ""   
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -35,7 +36,7 @@ function Auth({ onLogin }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { username, email, password, confirmPassword, phonenumber, loginIdentifier, role, accessCode } = formData;
+    const { username, email, password, confirmPassword, phonenumber, loginIdentifier, role, accessCode, inviteCode } = formData;
 
     if (isSignup) {
       if (!username || !password || !email || !phonenumber || !confirmPassword) {
@@ -44,9 +45,11 @@ function Auth({ onLogin }) {
       if (password !== confirmPassword) {
         return setError("Passwords do not match");
       }
-      // Simple security: if they choose manager, they need a code
       if (role === "manager" && accessCode !== "BOSS2026") {
         return setError("Invalid Manager Access Code");
+      }
+      if (role === "staff" && !inviteCode) {
+        return setError("Please enter an Invite Code from your manager");
       }
     } else {
       if (!loginIdentifier || !password) {
@@ -64,13 +67,14 @@ function Auth({ onLogin }) {
           email: email.trim().toLowerCase(),
           password,
           phonenumber: phonenumber.trim(),
-          role: role // Send role to backend
+          role: role,
+          inviteCode: role === "staff" ? inviteCode.trim().toUpperCase() : undefined
         });
 
-        const token = res.data.token;
-        if (token) {
-          localStorage.setItem("token", token);
-          onLogin(); 
+        if (res.data.token) {
+          localStorage.setItem("token", res.data.token);
+          // CRITICAL: Passing user data back to App.jsx
+          onLogin(res.data.user); 
         }
       } else {
         const res = await API.post("/auth/login", { 
@@ -79,10 +83,13 @@ function Auth({ onLogin }) {
         });
         
         localStorage.setItem("token", res.data.token);
-        onLogin();
+        // CRITICAL: Passing user data back to App.jsx
+        onLogin(res.data.user);
       }
     } catch (err) {
-      setError(err.response?.data?.error || "An error occurred");
+      // Improved error handling to catch "next is not a function" or backend crashes
+      const errorMsg = err.response?.data?.error || "Connection error. Please try again.";
+      setError(errorMsg.toUpperCase());
     } finally {
       setLoading(false);
     }
@@ -106,7 +113,7 @@ function Auth({ onLogin }) {
       <div className="relative min-h-screen flex items-center justify-center px-4 z-10">
         <Card className="w-full max-w-md border-none bg-white/95 shadow-2xl backdrop-blur-sm rounded-[2rem] overflow-hidden">
           <CardHeader className="pb-2 pt-8">
-            <CardTitle className="text-2xl font-black text-center text-gray-900 uppercase tracking-tight">
+            <CardTitle className="text-2xl font-black text-center text-gray-900 uppercase tracking-tighter">
               {isSignup ? "Join the Team" : "Welcome back"}
             </CardTitle>
           </CardHeader>
@@ -118,20 +125,19 @@ function Auth({ onLogin }) {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Username</label>
-                      <input name="username" type="text" value={formData.username} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500 transition-all" placeholder="John" />
+                      <input name="username" type="text" value={formData.username} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500 transition-all font-bold" placeholder="John" />
                     </div>
                     <div>
                       <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Phone</label>
-                      <input name="phonenumber" type="text" value={formData.phonenumber} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500 transition-all" placeholder="078..." />
+                      <input name="phonenumber" type="text" value={formData.phonenumber} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500 transition-all font-bold" placeholder="078..." />
                     </div>
                   </div>
 
                   <div>
                     <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Email Address</label>
-                    <input name="email" type="email" value={formData.email} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500 transition-all" placeholder="name@example.com" />
+                    <input name="email" type="email" value={formData.email} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500 transition-all font-bold" placeholder="name@example.com" />
                   </div>
 
-                  {/* ROLE SELECTION */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="relative">
                       <label className="text-[10px] font-black uppercase text-gray-400 ml-1">I am a...</label>
@@ -140,7 +146,7 @@ function Auth({ onLogin }) {
                           name="role" 
                           value={formData.role} 
                           onChange={handleChange}
-                          className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500 appearance-none transition-all"
+                          className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500 appearance-none transition-all font-bold cursor-pointer"
                         >
                           <option value="staff">Staff Member</option>
                           <option value="manager">Manager</option>
@@ -149,8 +155,8 @@ function Auth({ onLogin }) {
                       </div>
                     </div>
 
-                    {formData.role === "manager" && (
-                      <div className="animate-in slide-in-from-left-2 duration-300">
+                    {formData.role === "manager" ? (
+                      <div className="animate-in slide-in-from-right-2 duration-300">
                         <label className="text-[10px] font-black uppercase text-orange-600 ml-1 flex items-center gap-1">
                           <ShieldCheck className="w-3 h-3" /> Access Code
                         </label>
@@ -159,8 +165,22 @@ function Auth({ onLogin }) {
                           type="password" 
                           value={formData.accessCode} 
                           onChange={handleChange} 
-                          className="w-full mt-1 px-4 py-2.5 rounded-xl border border-orange-200 bg-orange-50 text-black outline-none focus:ring-2 focus:ring-orange-500" 
-                          placeholder="Code" 
+                          className="w-full mt-1 px-4 py-2.5 rounded-xl border border-orange-200 bg-orange-50 text-black outline-none focus:ring-2 focus:ring-orange-500 font-bold" 
+                          placeholder="BOSS2026" 
+                        />
+                      </div>
+                    ) : (
+                      <div className="animate-in slide-in-from-right-2 duration-300">
+                        <label className="text-[10px] font-black uppercase text-blue-600 ml-1 flex items-center gap-1">
+                          <Users className="w-3 h-3" /> Invite Code
+                        </label>
+                        <input 
+                          name="inviteCode" 
+                          type="text" 
+                          value={formData.inviteCode} 
+                          onChange={handleChange} 
+                          className="w-full mt-1 px-4 py-2.5 rounded-xl border border-blue-200 bg-blue-50 text-black outline-none focus:ring-2 focus:ring-blue-500 font-bold" 
+                          placeholder="CODE" 
                         />
                       </div>
                     )}
@@ -175,7 +195,7 @@ function Auth({ onLogin }) {
                     placeholder="Enter email or phone"
                     value={formData.loginIdentifier}
                     onChange={handleChange}
-                    className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                    className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none transition-all font-bold"
                   />
                 </div>
               )}
@@ -188,32 +208,32 @@ function Auth({ onLogin }) {
                   placeholder="••••••••" 
                   value={formData.password} 
                   onChange={handleChange} 
-                  className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none transition-all" 
+                  className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none transition-all font-bold" 
                 />
               </div>
 
               {isSignup && (
                 <div>
                   <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Confirm Password</label>
-                  <input name="confirmPassword" type="password" placeholder="••••••••" value={formData.confirmPassword} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none transition-all" />
+                  <input name="confirmPassword" type="password" placeholder="••••••••" value={formData.confirmPassword} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none transition-all font-bold" />
                 </div>
               )}
 
               {error && (
-                <div className="mt-2 p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-xs font-bold uppercase flex items-center gap-2">
-                  <div className="w-1 h-1 rounded-full bg-red-600" /> {error}
+                <div className="mt-2 p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-xs font-black uppercase flex items-center gap-2">
+                  <div className="w-1 h-1 rounded-full bg-red-600 animate-pulse" /> {error}
                 </div>
               )}
 
-              <button type="submit" disabled={loading} className="w-full mt-4 py-4 rounded-2xl bg-orange-500 text-white font-black hover:bg-orange-600 shadow-lg shadow-orange-500/30 active:scale-[0.98] transition-all disabled:opacity-50 tracking-widest">
+              <button type="submit" disabled={loading} className="w-full mt-4 py-4 rounded-2xl bg-orange-500 text-white font-black hover:bg-orange-600 shadow-xl shadow-orange-500/30 active:scale-[0.97] transition-all disabled:opacity-50 tracking-widest text-sm">
                 {loading ? "PROCESSING..." : isSignup ? "CREATE ACCOUNT" : "LOG IN"}
               </button>
             </form>
 
-            <div className="mt-8 text-center">
-              <button onClick={toggleAuthMode} className="text-xs text-gray-500 hover:text-orange-500 transition-colors tracking-wide">
-                {isSignup ? "ALREADY HAVE AN ACCOUNT? " : "DON'T HAVE AN ACCOUNT? "}
-                <span className="font-black text-orange-500 ml-1">{isSignup ? "LOGIN" : "SIGN UP"}</span>
+            <div className="mt-8 text-center border-t border-gray-100 pt-6">
+              <button onClick={toggleAuthMode} className="text-[10px] text-gray-400 hover:text-orange-500 transition-colors tracking-widest font-black uppercase">
+                {isSignup ? "Already have an account? " : "New to the team? "}
+                <span className="text-orange-500 underline decoration-2 underline-offset-4">{isSignup ? "Login" : "Sign Up"}</span>
               </button>
             </div>
           </CardContent>

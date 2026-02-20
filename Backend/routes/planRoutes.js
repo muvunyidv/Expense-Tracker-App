@@ -4,22 +4,16 @@ const Plan = require("../models/Plan");
 const Expense = require("../models/Expense");
 const authMiddleware = require("../middleware/auth");
 
-// GET plans
+// GET plans (Filtered by Silo)
 router.get("/", authMiddleware, async (req, res) => {
   try {
-    let query = {};
+    let query = { tenantId: req.user.tenantId }; // Basic Silo Lock
 
-    if (req.user.role === "manager") {
-      // MANAGER VIEW: 
-      // Managers need to see everything to manage the team.
-      // 1. All Pending requests (The Queue)
-      // 2. All Approved/Rejected history (The Audit Trail)
-      query = {}; // Empty object finds all plans in the collection
-    } else {
-      // STAFF/NORMAL USER VIEW: 
-      // Only see their own requests (Pending, Approved, or Rejected).
-      query = { userId: req.user.id };
+    // If STAFF, further restrict to only their OWN items within the silo
+    if (req.user.role !== "manager") {
+      query.userId = req.user.id;
     }
+    // If MANAGER, query remains { tenantId: req.user.tenantId }, seeing everyone in the group
 
     const plans = await Plan.find(query)
       .populate("userId", "username")
@@ -43,12 +37,13 @@ router.post("/", authMiddleware, async (req, res) => {
     }
 
     const newPlan = new Plan({
+      tenantId: req.user.tenantId, // Tag with the user's specific group ID
       description,
       amount,
       category, 
       priority: priority || "normal",
       notes,
-      userId: req.user.id, // The person creating the request
+      userId: req.user.id,
       status: "pending"
     });
 
@@ -76,18 +71,18 @@ router.patch("/:id/status", authMiddleware, async (req, res) => {
     const { status } = req.body;
     const planId = req.params.id;
     
-    // 2. Find the Plan
-    const planToUpdate = await Plan.findById(planId);
+    // 2. Find the Plan and Ensure it belongs to the Manager's Silo
+    const planToUpdate = await Plan.findOne({ _id: planId, tenantId: req.user.tenantId });
       
     if (!planToUpdate) {
-      return res.status(404).json({ error: "Plan not found" });
+      return res.status(404).json({ error: "Plan not found in your workspace" });
     }
 
     // 3. Logic: If approved, convert to an Expense
-    // Important: We link the expense to the original requester (planToUpdate.userId)
     if (status === "approved" && planToUpdate.status !== "approved") {
       const newExpense = new Expense({
-        userId: planToUpdate.userId, 
+        tenantId: planToUpdate.tenantId, // CRITICAL: Expense stays in the same Silo
+        userId: planToUpdate.userId,     // Expense belongs to the original requester
         categoryId: planToUpdate.category, 
         amount: planToUpdate.amount,
         description: `[Approved] ${planToUpdate.description}`,

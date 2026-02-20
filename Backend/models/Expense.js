@@ -1,6 +1,13 @@
 const mongoose = require('mongoose');
 
 const expenseSchema = new mongoose.Schema({
+  // THE SILO: Ensures this expense stays within the specific Home or Company
+  tenantId: { 
+    type: String, 
+    required: true,
+    index: true 
+  },
+  // THE OWNER: Tracks which specific person (Staff or Manager) made the purchase
   userId: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User', 
@@ -16,13 +23,11 @@ const expenseSchema = new mongoose.Schema({
     required: true, 
     min: 0 
   },
-  // This acts as the "Expense Title" (e.g., "Grocery Shopping")
   description: { 
     type: String, 
     required: true,
     trim: true
   },
-  // This acts as the separate "Description / Notes" field you added to the form
   notes: { 
     type: String, 
     default: '',
@@ -34,8 +39,11 @@ const expenseSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// Optimized Indexes
-expenseSchema.index({ userId: 1, date: -1 });
-expenseSchema.index({ userId: 1, categoryId: 1 });
+// Optimized Multi-Tenant Indexes
+// 1. For the Dashboard: Fetching a user's personal expenses within their group
+expenseSchema.index({ tenantId: 1, userId: 1, date: -1 });
+
+// 2. For the Manager/Owner: Fetching group-wide analytics by category
+expenseSchema.index({ tenantId: 1, categoryId: 1 });
 
 module.exports = mongoose.model('Expense', expenseSchema);

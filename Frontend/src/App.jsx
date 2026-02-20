@@ -1,32 +1,51 @@
-import { useState } from "react"
-import Auth from "./pages/Auth"
-import Dashboard from "./pages/Dashboard"
+import { useState, useEffect } from "react";
+import Auth from "./pages/Auth";
+import Dashboard from "./pages/Dashboard";
 
 export default function App() {
-  // 1. Initialize state from localStorage (where your Auth page saves the token)
+  // 1. Initialize state with both auth status and user data
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem("token") !== null;
   });
 
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem("user");
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
   // 2. Handle Login
-  const handleLogin = () => {
-    // We don't need to pass userData here because Auth.jsx 
-    // already saved the token to localStorage
+  const handleLogin = (userData) => {
+    // Auth.jsx should pass the user object here after successful login/reg
+    if (userData) {
+      setUser(userData);
+      localStorage.setItem("user", JSON.stringify(userData));
+    }
     setIsAuthenticated(true);
   };
 
   // 3. Handle Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUser(null);
     setIsAuthenticated(false);
-    // This will force the URL back to clean state
     window.location.hash = ""; 
   };
 
+  // 4. Sync Auth State (Optional: helps if user clears storage manually)
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setIsAuthenticated(false);
+      setUser(null);
+    }
+  }, []);
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background font-sans antialiased text-zinc-900">
       {isAuthenticated ? (
-        <Dashboard onLogout={handleLogout} />
+        // Pass the user data to the Dashboard so the Sidebar can use it
+        <Dashboard onLogout={handleLogout} user={user} />
       ) : (
         <Auth onLogin={handleLogin} />
       )}

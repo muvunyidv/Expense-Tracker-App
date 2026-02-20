@@ -12,14 +12,16 @@ const authMiddleware = (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Defensive check: ensure the token contains necessary info
-    if (!decoded.id) {
-      return res.status(401).json({ error: 'Invalid token payload' });
+    if (!decoded.id || !decoded.tenantId) {
+      return res.status(401).json({ error: 'Invalid token payload: Missing User or Tenant ID' });
     }
 
-    // UPDATED: Now passing both ID and ROLE to the rest of the app
+    // Pass the essential identity data to the request object
     req.user = { 
       id: decoded.id,
-      role: decoded.role // This allows req.user.role to work in planRoutes.js
+      username: decoded.username,
+      role: decoded.role,
+      tenantId: decoded.tenantId // This is the "Silo" ID that locks data access
     };
 
     next();

@@ -15,4 +15,17 @@ API.interceptors.request.use((req) => {
   return req;
 });
 
+// Helper to clear local storage on auth failure (Optional but safe)
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("userRole");
+      // Optional: window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default API;

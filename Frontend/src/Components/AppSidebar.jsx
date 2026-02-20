@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Tags, Wallet , ClipboardList } from "lucide-react";
+import { LayoutDashboard, Tags, Wallet, ClipboardList, Users, Copy, Check, UserCircle, ShieldCheck } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -13,25 +13,14 @@ import {
 } from "./ui/sidebar";
 
 const menuItems = [
-  {
-    title: "Summary",
-    icon: LayoutDashboard,
-    url: "#summary",
-  },
-  {
-    title: "Categories",
-    icon: Tags,
-    url: "#categories",
-  },
-   {
-    title: "Plans",
-    icon: ClipboardList,
-    url: "#plans",
-  },
+  { title: "Summary", icon: LayoutDashboard, url: "#summary" },
+  { title: "Categories", icon: Tags, url: "#categories" },
+  { title: "Plans", icon: ClipboardList, url: "#plans" },
 ];
 
-export function AppSidebar({ total = 0 }) {
+export function AppSidebar({ total = 0, user = {} }) {
   const [activeHash, setActiveHash] = useState(() => window.location.hash || "#summary");
+  const [copied, setCopied] = useState(false);
   const { isMobile, setOpen } = useSidebar();
 
   useEffect(() => {
@@ -40,21 +29,51 @@ export function AppSidebar({ total = 0 }) {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
-  
   const handleNavigation = () => {
     if (isMobile) setOpen(false);
   };
 
+  const handleCopyCode = () => {
+    if (user?.inviteCode) {
+      navigator.clipboard.writeText(user.inviteCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const isManager = user?.role === "manager";
+
   return (
-    <Sidebar className="border-gray-300">
-      <SidebarContent className="justify-between">
-        <div>
-          <SidebarGroup className="pt-6">
-            <SidebarGroupLabel className="text-zinc-900  dark:text-foreground font-bold mb-4 px-2">
-              EXPENSE TRACKER
+    <Sidebar className="border-r border-zinc-200 bg-white">
+      <SidebarContent className="justify-between h-full bg-white">
+        <div className="flex flex-col h-full">
+          <SidebarGroup className="pt-8">
+            <SidebarGroupLabel className="text-zinc-900 font-black mb-8 px-2 tracking-tighter text-xl italic">
+              EXPENSE<span className="text-orange-500">.</span>TRK
             </SidebarGroupLabel>
+
+            {/* IDENTITY CARD - Consistent Orange Theme */}
+            <div className="px-2 mb-8">
+              <div className="flex items-center gap-3 p-3 rounded-2xl border border-orange-100 bg-orange-50/50 transition-all">
+                <div className="h-11 w-11 rounded-xl flex items-center justify-center text-white shadow-lg bg-orange-500 shadow-orange-200">
+                  {isManager ? <ShieldCheck className="w-6 h-6" /> : <UserCircle className="w-6 h-6" />}
+                </div>
+                <div className="overflow-hidden">
+                  <p className="text-sm font-black text-zinc-900 truncate uppercase tracking-tight">
+                    {user?.username || "Guest User"}
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full animate-pulse bg-orange-500" />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-orange-600">
+                      {user?.role || "Staff"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="gap-1">
                 {menuItems.map((item) => {
                   const isActive = activeHash === item.url;
                   return (
@@ -63,10 +82,21 @@ export function AppSidebar({ total = 0 }) {
                         asChild 
                         active={isActive}
                         onClick={handleNavigation}
+                        className={`py-6 rounded-xl transition-all border border-transparent ${
+                          isActive 
+                            ? "bg-zinc-900 text-white shadow-xl shadow-zinc-200 border-zinc-900" 
+                            : "hover:bg-zinc-50 hover:border-zinc-100"
+                        }`}
                       >
                         <a href={item.url} className="flex items-center gap-3">
-                          <item.icon className={`w-4 h-4 ${isActive ? 'text-orange-500' : ''}`} />
-                          <span className="font-medium">{item.title}</span>
+                          <item.icon className={`w-5 h-5 transition-colors ${
+                            isActive ? 'text-orange-500' : 'text-zinc-400'
+                          }`} />
+                          <span className={`font-black uppercase text-[11px] tracking-widest ${
+                            isActive ? 'text-white' : 'text-zinc-500'
+                          }`}>
+                            {item.title}
+                          </span>
                         </a>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -75,36 +105,50 @@ export function AppSidebar({ total = 0 }) {
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-        </div>
 
-        {/* POLISHED TOTAL BALANCE WIDGET */}
-        <div className="px-4 mb-8">
-          <div className="relative overflow-hidden bg-orange-600 rounded-2xl p-5 shadow-lg transition-transform active:scale-95">
-            {/* Subtle decorative glow */}
-            <div className="absolute -right-2 -top-2 h-16 w-16 rounded-full bg-white/10 blur-xl" />
-            
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="p-1.5 bg-white/20 rounded-lg">
-                  <Wallet className="w-4 h-4 text-white" />
+          <div className="mt-auto p-4 space-y-4">
+            {/* RECRUIT STAFF - Orange Branding */}
+            {isManager && user?.inviteCode && (
+              <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-4 shadow-lg shadow-orange-100 animate-in slide-in-from-left duration-500">
+                <div className="flex items-center gap-2 mb-3">
+                  <Users className="w-3.5 h-3.5 text-orange-100" />
+                  <span className="text-[10px] font-black text-orange-100 uppercase tracking-widest">Recruit Staff</span>
                 </div>
-                <span className="text-[10px] font-bold text-white/90 uppercase tracking-widest">
-                  Total Spent
-                </span>
+                <button 
+                  onClick={handleCopyCode}
+                  className="w-full flex items-center justify-between bg-white/10 border border-white/20 px-3 py-2.5 rounded-xl hover:bg-white/20 transition-all group active:scale-95"
+                >
+                  <span className="text-sm font-black text-white tracking-widest">{user.inviteCode}</span>
+                  {copied ? (
+                    <Check className="w-4 h-4 text-white" />
+                  ) : (
+                    <Copy className="w-4 h-4 text-orange-200 group-hover:text-white" />
+                  )}
+                </button>
+                <p className="text-[9px] text-orange-200 font-bold mt-2 uppercase text-center tracking-tighter">Share code to sync group data</p>
               </div>
+            )}
+
+            {/* TOTAL WIDGET - Updated to Orange Branding */}
+            <div className="relative overflow-hidden rounded-2xl p-5 shadow-xl bg-orange-600 shadow-orange-500/30 active:scale-95 transition-all">
+              <div className="absolute -right-2 -top-2 h-16 w-16 rounded-full bg-white/10 blur-xl" />
               
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl font-black text-white tracking-tight">
-                  {total.toLocaleString()}
-                </span>
-                <span className="text-[10px] font-bold text-white/60 uppercase">
-                  Rwf
-                </span>
-              </div>
-              
-              {/* Decorative progress detail */}
-              <div className="mt-4 h-1 w-full bg-white/20 rounded-full overflow-hidden">
-                <div className="h-full bg-white/60 w-1/2 rounded-full" />
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1.5 rounded-lg bg-white/20">
+                    <Wallet className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-[10px] font-black text-white/90 uppercase tracking-widest">
+                    {isManager ? "Organization Total" : "My Total Expenses"}
+                  </span>
+                </div>
+                
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-black text-white tracking-tight">
+                    {total.toLocaleString()}
+                  </span>
+                  <span className="text-[10px] font-bold text-white/50 uppercase">Rwf</span>
+                </div>
               </div>
             </div>
           </div>
@@ -118,30 +162,26 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-   <footer className="mt-auto py-8 px-6 shadow-lg border-t border-gray-300  bg-card dark:bg-muted/50 backdrop-blur-sm">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-        <div className="flex flex-col items-center md:items-start gap-1">
+    <footer className="mt-auto py-10 px-6 border-t border-zinc-100 bg-zinc-50/50">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+        <div className="flex flex-col items-center md:items-start gap-1.5">
           <div className="flex items-center gap-2">
-             <div className="h-2 w-2 rounded-full bg-orange-500" />
-             <p className="text-sm font-bold dark:text-foreground uppercase tracking-tight">
-             Expense Tracker
+             <div className="h-2.5 w-2.5 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50" />
+             <p className="text-sm font-black text-zinc-900 uppercase tracking-tighter">
+               EXPENSE<span className="text-orange-500">.</span>TRK
              </p>
           </div>
-          <p className="text-xs text-zinc-500">
-            © {currentYear} All rights reserved. Created for financial clarity.
+          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+            © {currentYear} • GROUP FINANCIAL MANAGEMENT
           </p>
         </div>
 
         <div className="flex items-center gap-8">
-          <a href="#" className="text-xs font-bold text-zinc-500 hover:text-orange-500 uppercase tracking-widest transition-colors">
-            Privacy
-          </a>
-          <a href="#" className="text-xs font-bold text-zinc-500 hover:text-orange-500 uppercase tracking-widest transition-colors">
-            Terms
-          </a>
-          <a href="#" className="text-xs font-bold text-zinc-500 hover:text-orange-500 uppercase tracking-widest transition-colors">
-            Support
-          </a>
+          {["Privacy", "Terms", "Support"].map((link) => (
+            <a key={link} href="#" className="text-[10px] font-black text-zinc-400 hover:text-orange-500 uppercase tracking-[0.2em] transition-all">
+              {link}
+            </a>
+          ))}
         </div>
       </div>
     </footer>

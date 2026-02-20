@@ -4,22 +4,27 @@ const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
 
-// Get all categories for logged-in user
+// GET all categories for the shared group (Home or Company)
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const categories = await Category.find({ userId: req.user.id }).sort({ name: 1 });
+    // Filter by tenantId so everyone in the silo sees the same categories
+    const categories = await Category.find({ tenantId: req.user.tenantId }).sort({ name: 1 });
     res.json(categories);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Get category by ID
+// GET category by ID
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
-    const category = await Category.findOne({ _id: req.params.id, userId: req.user.id });
+    const category = await Category.findOne({ 
+      _id: req.params.id, 
+      tenantId: req.user.tenantId 
+    });
+    
     if (!category) {
-      return res.status(404).json({ error: 'Category not found' });
+      return res.status(404).json({ error: 'Category not found in your workspace' });
     }
     res.json(category);
   } catch (error) {
@@ -27,9 +32,14 @@ router.get('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// Create category - FIXED: Added authMiddleware here
+// POST Create category (Manager/Owner Only)
 router.post('/', authMiddleware, async (req, res) => {
   try {
+    // Optional: Only allow Managers/Owners to define categories to keep things organized
+    if (req.user.role !== 'manager') {
+      return res.status(403).json({ error: 'Only Managers or Home Owners can create categories' });
+    }
+
     const { name, description } = req.body;
 
     if (!name) {
@@ -37,7 +47,8 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 
     const category = new Category({
-      userId: req.user.id, // Now works because authMiddleware is present
+      tenantId: req.user.tenantId, // Linked to the shared group
+      createdBy: req.user.id,      // Keep track of who made it
       name: name.trim(),
       description
     });
@@ -45,27 +56,26 @@ router.post('/', authMiddleware, async (req, res) => {
     await category.save();
     res.status(201).json(category);
   } catch (error) {
-    // 11000 is the MongoDB code for a duplicate key (from your unique index)
     if (error.code === 11000) {
-      return res.status(409).json({ error: 'You already have a category with this name' });
+      return res.status(409).json({ error: 'This category already exists in your group' });
     }
     res.status(500).json({ error: error.message });
   }
 });
 
-// Update category
+// PUT Update category
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
-    const { name, description } = req.body;
-
-    if (!name) {
-      return res.status(400).json({ error: 'Name is required' });
+    if (req.user.role !== 'manager') {
+      return res.status(403).json({ error: 'Access denied' });
     }
 
+    const { name, description } = req.body;
+
     const category = await Category.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.id },
+      { _id: req.params.id, tenantId: req.user.tenantId },
       { name: name.trim(), description },
-      { new: true, runValidators: true } // runValidators ensures schema rules are followed
+      { new: true, runValidators: true }
     );
     
     if (!category) {
@@ -77,10 +87,18 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// Delete category
+// DELETE category
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
-    const category = await Category.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    if (req.user.role !== 'manager') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const category = await Category.findOneAndDelete({ 
+      _id: req.params.id, 
+      tenantId: req.user.tenantId 
+    });
+
     if (!category) {
       return res.status(404).json({ error: 'Category not found' });
     }

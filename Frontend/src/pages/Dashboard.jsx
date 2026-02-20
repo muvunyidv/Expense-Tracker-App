@@ -15,6 +15,7 @@ import {
 } from "../Components/ui/sidebar";
 import { LogOut, PlusCircle, User, ArrowRight, Wallet, ShieldCheck } from "lucide-react";
 
+// Sub-component for the main dashboard layout
 function DashboardContent({ 
   onLogout, user, totalExpenses, searchQuery, setSearchQuery, 
   categories, currentPage, title, description, handleOpenAddForm, 
@@ -26,10 +27,12 @@ function DashboardContent({
 
   return (
     <div className="flex min-h-screen w-full relative">
-      <AppSidebar total={totalExpenses} variant="inset" /> 
+      {/* Pass the real user object here to fix the Sidebar labels */}
+      <AppSidebar total={totalExpenses} variant="inset" user={user} /> 
       
       <SidebarInset>
         <div className="flex-1 flex flex-col">
+          {/* Top Navigation Bar */}
           <div className="sticky top-0 z-50 bg-background/95 backdrop-blur shadow-lg border-b/80 border-gray-100">
             <div className="max-w-7xl mx-auto grid grid-cols-3 items-center px-4 md:px-6 py-3">
               <div className="flex items-center gap-2">
@@ -46,16 +49,16 @@ function DashboardContent({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search your records..."
-                  className="w-full px-4 py-2 rounded-full border border-border bg-muted/50 focus:bg-background focus:ring-2 focus:ring-orange-500 outline-none transition-all text-sm"
+                  className="w-full px-4 py-2 rounded-full border border-border bg-muted/50 focus:bg-background focus:ring-2 focus:ring-orange-500 outline-none transition-all text-sm font-medium"
                 />
               </div>
 
               <div className="flex items-center gap-3 justify-self-end relative" ref={menuRef}>
                 {/* ROLE BADGE: Shows if the user is a manager */}
                 {user?.role === "manager" && !isMobile && (
-                  <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full border border-blue-200 dark:border-blue-800 animate-in fade-in zoom-in-90">
                     <ShieldCheck className="w-3.5 h-3.5" />
-                    <span className="text-[10px] font-bold uppercase tracking-tight">Manager</span>
+                    <span className="text-[10px] font-black uppercase tracking-tight">Manager</span>
                   </div>
                 )}
 
@@ -69,16 +72,16 @@ function DashboardContent({
                 {isUserMenuOpen && (
                   <div className="absolute right-0 top-full mt-3 w-64 rounded-xl border border-border shadow-2xl p-2 animate-in fade-in zoom-in-95 duration-100 z-[999] bg-white dark:bg-[#1c1c1c]">
                     <div className="px-4 py-3 border-b border-border/50 mb-1">
-                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-widest">Account</p>
-                      <p className="text-sm font-bold truncate mt-0.5 text-zinc-900 dark:text-white">{user?.username || 'User'}</p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">{user?.email}</p>
+                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-black uppercase tracking-widest">Account</p>
+                      <p className="text-sm font-bold truncate mt-0.5 text-zinc-900 dark:text-white capitalize">{user?.username || 'User'}</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate font-medium">{user?.email}</p>
                     </div>
                     <div className="flex items-center justify-between px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors cursor-default">
-                      <span className="text-sm font-medium text-zinc-900 dark:text-white">Appearance</span>
+                      <span className="text-sm font-semibold text-zinc-900 dark:text-white">Appearance</span>
                       <ThemeToggle />
                     </div>
                     <div className="h-px bg-border/50 my-1" />
-                    <button onClick={handleLogout} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                    <button onClick={handleLogout} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
                       <LogOut className="w-4 h-4" /> Logout
                     </button>
                   </div>
@@ -98,13 +101,13 @@ function DashboardContent({
                 <>
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                      <h1 className="text-3xl font-extrabold tracking-tight text-foreground">{title}</h1>
-                      <p className="text-muted-foreground mt-1 text-sm">{description}</p>
+                      <h1 className="text-3xl font-black tracking-tight text-foreground">{title}</h1>
+                      <p className="text-muted-foreground mt-1 text-sm font-medium">{description}</p>
                     </div>
                     <button 
                       onClick={handleOpenAddForm}
                       disabled={categories.length === 0}
-                      className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all shadow-lg active:scale-95 ${
+                      className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-black transition-all shadow-lg active:scale-95 ${
                         categories.length === 0 
                         ? "bg-muted text-muted-foreground cursor-not-allowed opacity-60" 
                         : "bg-orange-500 text-white hover:bg-orange-600 shadow-orange-500/30"
@@ -115,7 +118,6 @@ function DashboardContent({
                     </button>
                   </div>
 
-                  {/* Clean Expense List: Handles searching and display */}
                   <ExpenseList 
                     searchQuery={searchQuery} 
                     onEditExpense={handleEditClick}
@@ -124,9 +126,9 @@ function DashboardContent({
 
                   {categories.length === 0 && (
                     <div className="text-center py-8 bg-muted/20 rounded-2xl border border-dashed border-border animate-in fade-in duration-700">
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground font-medium">
                         You need to create categories first.{" "}
-                        <a href="#categories" className="text-orange-500 font-bold hover:underline inline-flex items-center gap-0.5">
+                        <a href="#categories" className="text-orange-500 font-black hover:underline inline-flex items-center gap-0.5">
                           Set up categories <ArrowRight className="w-3.5 h-3.5" />
                         </a>
                       </p>
@@ -158,38 +160,35 @@ function DashboardContent({
   );
 }
 
-export default function Dashboard({ onLogout }) {
+// Main Controller Component
+export default function Dashboard({ onLogout, user: initialUser }) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [viewingExpense, setViewingExpense] = useState(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [user, setUser] = useState(null);
+  
+  // Use user from props or fall back to local fetch
+  const [user, setUser] = useState(initialUser);
+  
   const [currentPage, setCurrentPage] = useState(() => window.location.hash || "#summary");
   const [searchQuery, setSearchQuery] = useState("");
   const [categories, setCategories] = useState([]);
   const [totalExpenses, setTotalExpenses] = useState(0); 
   const menuRef = useRef(null);
 
-  // FETCH: Only real expenses (which now includes approved plans via the backend move)
-  const fetchTotal = async () => {
-    try {
-      const res = await API.get("/expenses");
-      const total = res.data.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-      setTotalExpenses(total);
-    } catch (err) {
-      console.error("Failed to fetch total", err);
-    }
-  };
-
   useEffect(() => {
+    // If App.jsx didn't have the user yet (refresh), fetch it now
+    if (!user) {
+      fetchUserData();
+    }
+
     const onHashChange = () => {
       setCurrentPage(window.location.hash || "#summary");
-      setIsUserMenuOpen(false); // Close menu on navigation
+      setIsUserMenuOpen(false); 
     };
 
     window.addEventListener("hashchange", onHashChange);
     fetchCategories();
-    fetchUserData();
     fetchTotal();
 
     const handleClickOutside = (event) => {
@@ -197,6 +196,7 @@ export default function Dashboard({ onLogout }) {
         setIsUserMenuOpen(false);
       }
     };
+    
     document.addEventListener("mousedown", handleClickOutside);
     window.addEventListener("expensesUpdated", fetchTotal);
 
@@ -205,14 +205,27 @@ export default function Dashboard({ onLogout }) {
       document.removeEventListener("mousedown", handleClickOutside);
       window.removeEventListener("expensesUpdated", fetchTotal);
     };
-  }, []);
+  }, [user]);
 
   const fetchUserData = async () => {
     try {
       const res = await API.get("/auth/me");
       setUser(res.data);
+      // Sync localstorage for App.jsx to pick up on next refresh
+      localStorage.setItem("user", JSON.stringify(res.data));
     } catch (err) {
       console.error("Auth failed", err);
+      if (err.response?.status === 401) onLogout();
+    }
+  };
+
+  const fetchTotal = async () => {
+    try {
+      const res = await API.get("/expenses");
+      const total = res.data.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+      setTotalExpenses(total);
+    } catch (err) {
+      console.error("Failed to fetch total", err);
     }
   };
 
@@ -224,7 +237,8 @@ export default function Dashboard({ onLogout }) {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem("token"); // Assuming you use tokens
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     if (typeof onLogout === "function") onLogout();
   };
 
@@ -235,7 +249,6 @@ export default function Dashboard({ onLogout }) {
       } else {
         await API.post("/expenses", expenseData);
       }
-      // This event triggers fetchTotal() and updates the ExpenseList
       window.dispatchEvent(new Event("expensesUpdated"));
       setIsFormOpen(false);
       setEditingExpense(null);

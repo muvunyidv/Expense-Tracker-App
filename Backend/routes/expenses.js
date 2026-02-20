@@ -13,8 +13,13 @@ router.use(authMiddleware);
 ================================ */
 router.get('/summary/all', async (req, res) => {
   try {
+    // MANAGER see group total; STAFF see personal total
+    const matchQuery = req.user.role === 'manager' 
+      ? { tenantId: req.user.tenantId } 
+      : { userId: new mongoose.Types.ObjectId(req.user.id), tenantId: req.user.tenantId };
+
     const summary = await Expense.aggregate([
-      { $match: { userId: new mongoose.Types.ObjectId(req.user.id) } },
+      { $match: matchQuery },
       { $group: { _id: '$categoryId', total: { $sum: '$amount' } } },
       {
         $lookup: {
@@ -42,72 +47,25 @@ router.get('/summary/all', async (req, res) => {
 });
 
 /* ================================
-   Get expenses by category
-================================ */
-router.get('/category/:categoryId', async (req, res) => {
-  try {
-    const { categoryId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
-      return res.status(400).json({ error: 'Invalid category ID' });
-    }
-
-    const expenses = await Expense.find({
-      userId: req.user.id,
-      categoryId
-    })
-      .sort({ date: -1 })
-      .populate('categoryId', 'name');
-
-    res.json(expenses);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-/* ================================
-   Get all expenses (paginated)
+   Get all expenses (Filtered by Tenant)
 ================================ */
 router.get('/', async (req, res) => {
   try {
     const { limit = 100, offset = 0 } = req.query;
+    
+    // Logic: Managers see ALL group expenses, Staff see only their OWN
+    const query = req.user.role === 'manager'
+      ? { tenantId: req.user.tenantId }
+      : { userId: req.user.id, tenantId: req.user.tenantId };
 
-    const parsedLimit = Math.min(parseInt(limit) || 100, 200);
-    const parsedOffset = parseInt(offset) || 0;
-
-    const expenses = await Expense.find({ userId: req.user.id })
+    const expenses = await Expense.find(query)
       .sort({ date: -1 })
-      .limit(parsedLimit)
-      .skip(parsedOffset)
-      .populate('categoryId', 'name');
+      .limit(Math.min(parseInt(limit), 200))
+      .skip(parseInt(offset))
+      .populate('categoryId', 'name')
+      .populate('userId', 'username'); // See who spent the money
 
     res.json(expenses);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-/* ================================
-   Get expense by ID
-================================ */
-router.get('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ error: 'Invalid expense ID' });
-    }
-
-    const expense = await Expense.findOne({
-      _id: id,
-      userId: req.user.id
-    }).populate('categoryId', 'name');
-
-    if (!expense) {
-      return res.status(404).json({ error: 'Expense not found' });
-    }
-
-    res.json(expense);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -118,35 +76,30 @@ router.get('/:id', async (req, res) => {
 ================================ */
 router.post('/', async (req, res) => {
   try {
-    // UPDATED: Destructure 'notes' from request body
     const { categoryId, amount, description, notes, date } = req.body;
 
-    if (!categoryId || amount == null || !date) {
-      return res.status(400).json({
-        error: 'Category, amount, and date are required'
-      });
+    if (!categoryId || amount == null) {
+      return res.status(400).json({ error: 'Category and amount are required' });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
-      return res.status(400).json({ error: 'Invalid category ID' });
-    }
-
+    // Verify category exists WITHIN this tenant
     const category = await Category.findOne({
       _id: categoryId,
-      userId: req.user.id
+      tenantId: req.user.tenantId
     });
 
     if (!category) {
-      return res.status(400).json({ error: 'Invalid category' });
+      return res.status(400).json({ error: 'Invalid category for your group' });
     }
 
     const expense = new Expense({
+      tenantId: req.user.tenantId, // Link to the silo
       userId: req.user.id,
       categoryId,
       amount,
       description,
-      notes, // SAVED: Added new field
-      date
+      notes,
+      date: date || new Date()
     });
 
     await expense.save();
@@ -159,46 +112,44 @@ router.post('/', async (req, res) => {
 });
 
 /* ================================
+   Get expense by ID
+================================ */
+router.get('/:id', async (req, res) => {
+  try {
+    // Ensure the expense belongs to the user's tenant
+    const expense = await Expense.findOne({
+      _id: req.params.id,
+      tenantId: req.user.tenantId
+    }).populate('categoryId', 'name').populate('userId', 'username');
+
+    if (!expense) return res.status(404).json({ error: 'Expense not found' });
+    
+    res.json(expense);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/* ================================
    Update expense
 ================================ */
 router.put('/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    // UPDATED: Destructure 'notes' from request body
     const { categoryId, amount, description, notes, date } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ error: 'Invalid expense ID' });
-    }
-
-    if (!categoryId || amount == null || !date) {
-      return res.status(400).json({
-        error: 'Category, amount, and date are required'
-      });
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
-      return res.status(400).json({ error: 'Invalid category ID' });
-    }
-
-    const category = await Category.findOne({
-      _id: categoryId,
-      userId: req.user.id
-    });
-
-    if (!category) {
-      return res.status(400).json({ error: 'Invalid category' });
-    }
+    // Security: Only allow updating if it's in the same tenant
+    // Optionally: restrict so Staff can only update their OWN, but Manager can update ANY in tenant
+    const updateQuery = req.user.role === 'manager'
+      ? { _id: req.params.id, tenantId: req.user.tenantId }
+      : { _id: req.params.id, userId: req.user.id, tenantId: req.user.tenantId };
 
     const expense = await Expense.findOneAndUpdate(
-      { _id: id, userId: req.user.id },
-      { categoryId, amount, description, notes, date }, // UPDATED: Included 'notes' in update
+      updateQuery,
+      { categoryId, amount, description, notes, date },
       { new: true }
     ).populate('categoryId', 'name');
 
-    if (!expense) {
-      return res.status(404).json({ error: 'Expense not found' });
-    }
+    if (!expense) return res.status(404).json({ error: 'Expense not found or unauthorized' });
 
     res.json(expense);
   } catch (error) {
@@ -211,20 +162,13 @@ router.put('/:id', async (req, res) => {
 ================================ */
 router.delete('/:id', async (req, res) => {
   try {
-    const { id } = req.params;
+    const deleteQuery = req.user.role === 'manager'
+      ? { _id: req.params.id, tenantId: req.user.tenantId }
+      : { _id: req.params.id, userId: req.user.id, tenantId: req.user.tenantId };
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ error: 'Invalid expense ID' });
-    }
+    const expense = await Expense.findOneAndDelete(deleteQuery);
 
-    const expense = await Expense.findOneAndDelete({
-      _id: id,
-      userId: req.user.id
-    });
-
-    if (!expense) {
-      return res.status(404).json({ error: 'Expense not found' });
-    }
+    if (!expense) return res.status(404).json({ error: 'Expense not found' });
 
     res.json({ message: 'Expense deleted successfully' });
   } catch (error) {
