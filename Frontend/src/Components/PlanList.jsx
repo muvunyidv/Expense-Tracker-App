@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { ListChecks, Clock, CheckCircle2, XCircle, Plus, Loader2, AlertCircle, ClipboardList, Check, X } from "lucide-react";
-// FIX: Changed "Components" to "components" to solve the casing error from your screenshot
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { ListChecks, Clock, CheckCircle2, XCircle, Plus, Loader2, ClipboardList, Check, X } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
 import { AddPlanModal } from "./AddPlanModal"; 
 import API from "../api";
 
@@ -12,14 +11,14 @@ export function PlanList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userRole, setUserRole] = useState("staff");
 
-  // 1. FIX URL HASH ISSUE: Automatically removes "#summary" if it exists
+  // Clean up URL hash on mount
   useEffect(() => {
     if (window.location.hash) {
       window.history.replaceState(null, "", window.location.pathname);
     }
   }, []);
 
-  // 2. Extract role from token
+  // Parse user role from token
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -55,7 +54,14 @@ export function PlanList() {
   const handleStatusUpdate = async (id, newStatus) => {
     try {
       await API.patch(`/plans/${id}/status`, { status: newStatus });
-      fetchData();
+      // Important: If approved, it is deleted from Plans and moved to Expenses
+      // Refreshing data will remove it from this view.
+      fetchData(); 
+      
+      // Dispatch event so Dashboard total updates if approved
+      if (newStatus === 'approved') {
+        window.dispatchEvent(new Event("expensesUpdated"));
+      }
     } catch (error) {
       alert("Failed to update status");
     }
@@ -80,13 +86,16 @@ export function PlanList() {
     }
   };
 
+  // Only show Pending items in the main queue
+  const pendingPlans = plans.filter(p => p.status === 'pending');
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-foreground uppercase">Requirements</h1>
           <p className="text-sm text-muted-foreground">
-            {userRole === 'manager' ? "Review and manage all requests" : "Your supply requests"}
+            {userRole === 'manager' ? "Review and manage incoming requests" : "Items awaiting approval"}
           </p>
         </div>
         <button 
@@ -99,17 +108,17 @@ export function PlanList() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl flex justify-between items-center">
-          <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">Pending</span>
-          <span className="text-xl font-black">{plans.filter(p => p.status === 'pending').length}</span>
+          <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">In Queue</span>
+          <span className="text-xl font-black">{pendingPlans.length}</span>
         </div>
         <div className="p-4 bg-green-500/5 border border-green-500/20 rounded-2xl flex justify-between items-center">
-          <span className="text-xs font-bold text-green-600 uppercase tracking-wider">Approved</span>
+          <span className="text-xs font-bold text-green-600 uppercase tracking-wider">Approved Today</span>
           <span className="text-xl font-black">{plans.filter(p => p.status === 'approved').length}</span>
         </div>
         <div className="p-4 bg-muted rounded-2xl flex justify-between items-center">
-          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Value</span>
+          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Queue Value</span>
           <span className="text-xl font-black text-foreground">
-            {plans.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0).toLocaleString()} <span className="text-xs font-normal">Rwf</span>
+            {pendingPlans.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0).toLocaleString()} <span className="text-xs font-normal">Rwf</span>
           </span>
         </div>
       </div>
@@ -124,11 +133,14 @@ export function PlanList() {
         <CardContent className="p-0">
           {loading ? (
             <div className="flex flex-col items-center py-20"><Loader2 className="w-10 h-10 animate-spin text-orange-500" /></div>
-          ) : plans.length === 0 ? (
-            <div className="text-center py-20"><p className="text-muted-foreground font-medium">No requirements found.</p></div>
+          ) : pendingPlans.length === 0 ? (
+            <div className="text-center py-20">
+              <ClipboardList className="w-12 h-12 text-muted/30 mx-auto mb-4" />
+              <p className="text-muted-foreground font-medium">All caught up! No pending requirements.</p>
+            </div>
           ) : (
             <div className="divide-y divide-gray-100 dark:divide-zinc-800">
-              {plans.map((plan) => {
+              {pendingPlans.map((plan) => {
                 const ui = getStatusUI(plan.status);
                 return (
                   <div key={plan._id} className="flex items-center justify-between p-5 hover:bg-muted/30 transition-colors group">
@@ -140,7 +152,8 @@ export function PlanList() {
                            {plan.priority === 'urgent' && <span className="text-[9px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-black uppercase">Urgent</span>}
                         </div>
                         <div className="text-[11px] text-muted-foreground flex items-center gap-2 mt-0.5 uppercase font-medium">
-                          <span className="text-orange-500 font-bold">{plan.category}</span>
+                          {/* FIXED: Using .name because category is now a populated object */}
+                          <span className="text-orange-500 font-bold">{plan.category?.name || "Uncategorized"}</span>
                           <span className="opacity-30">•</span>
                           <span>{plan.userId?.username || "Staff"}</span>
                         </div>
@@ -153,24 +166,22 @@ export function PlanList() {
                         <div className={`text-[10px] uppercase font-black ${getPriorityColor(plan.priority)}`}>{plan.priority}</div>
                       </div>
 
-                      {userRole === "manager" && plan.status === "pending" ? (
+                      {userRole === "manager" && (
                         <div className="flex gap-2 ml-4">
                           <button 
                             onClick={() => handleStatusUpdate(plan._id, 'approved')}
                             className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors shadow-md shadow-green-500/20"
+                            title="Approve & move to Expenses"
                           >
                             <Check className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => handleStatusUpdate(plan._id, 'rejected')}
                             className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-md shadow-red-500/20"
+                            title="Reject Request"
                           >
                             <X className="w-4 h-4" />
                           </button>
-                        </div>
-                      ) : (
-                        <div className={`text-[10px] font-black uppercase px-2 py-1 rounded ${ui.color} ml-4`}>
-                          {ui.label}
                         </div>
                       )}
                     </div>
@@ -183,7 +194,6 @@ export function PlanList() {
       </Card>
 
       <AddPlanModal 
-        key={`modal-${categories.length}`}
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         categories={categories}

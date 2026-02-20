@@ -6,17 +6,11 @@ export function AddPlanModal({ isOpen, onClose, categories = [], onSuccess }) {
   const [formData, setFormData] = useState({
     description: "",
     amount: "",
-    category: "",
+    category: "", // This will now store the category ID
     priority: "normal",
     notes: ""
   });
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      console.log("AddPlanModal received categories:", categories);
-    }
-  }, [isOpen, categories]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -44,6 +38,9 @@ export function AddPlanModal({ isOpen, onClose, categories = [], onSuccess }) {
       const submissionData = {
         ...formData,
         amount: Number(formData.amount),
+        // Find the category name to store alongside the ID if your Plan model needs it,
+        // otherwise, the backend will use the ID to map to the Expense model.
+        categoryName: categories.find(c => c._id === formData.category)?.name,
         status: "pending"
       };
 
@@ -60,10 +57,9 @@ export function AddPlanModal({ isOpen, onClose, categories = [], onSuccess }) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200">
-      {/* Changed border-border to border-zinc-200/50 for softer lines */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800/50 w-full max-w-md rounded-[32px] shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
         
-        {/* Header - Softer Background */}
+        {/* Header */}
         <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center bg-orange-50/30 dark:bg-orange-500/5">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-orange-500 rounded-xl">
@@ -120,7 +116,7 @@ export function AddPlanModal({ isOpen, onClose, categories = [], onSuccess }) {
             </div>
           </div>
 
-          {/* Category Dropdown - Fix for visibility and empty state */}
+          {/* Category Dropdown - Now using ID as Value */}
           <div>
             <label className="text-[10px] font-black mb-2 block uppercase text-zinc-500 tracking-wider">Category</label>
             <div className="relative">
@@ -134,14 +130,13 @@ export function AddPlanModal({ isOpen, onClose, categories = [], onSuccess }) {
                    {categories.length > 0 ? "Select Category" : "--- No Categories Found ---"}
                 </option>
                 {categories.map((cat) => (
-                  <option key={cat._id} value={cat.name} className="text-zinc-900 dark:text-white bg-white dark:bg-zinc-900">
+                  <option key={cat._id} value={cat._id} className="text-zinc-900 dark:text-white bg-white dark:bg-zinc-900">
                     {cat.name}
                   </option>
                 ))}
               </select>
             </div>
             
-            {/* Soft Alert */}
             {categories.length === 0 && (
               <div className="mt-3 p-3 bg-red-50 dark:bg-red-500/5 border border-red-100 dark:border-red-500/10 rounded-2xl flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-red-500" />

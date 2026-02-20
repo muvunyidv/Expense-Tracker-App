@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Coffee, Home, ShoppingBag, Car, Utensils, Smartphone, Trash2, Loader2, Pencil } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { DeleteConfirmModal } from "./DeleteConfirmModal";
 import API from "../api";
 
@@ -35,8 +35,28 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
   const fetchExpenses = async () => {
     try {
       setLoading(true);
-      const res = await API.get("/expenses");
-      setRecentExpenses(res.data);
+      // Logic: Fetch both expenses and plans
+      const [expensesRes, plansRes] = await Promise.all([
+        API.get("/expenses"),
+        API.get("/plans")
+      ]);
+
+      // Filter plans for 'approved' and format them to match expense object structure
+      const approvedPlans = (plansRes.data || [])
+        .filter(plan => plan.status === "approved")
+        .map(plan => ({
+          ...plan,
+          date: plan.createdAt, // Using creation date as expense date
+          isPlan: true, 
+          categoryId: { name: plan.category } // Aligning with category nested object
+        }));
+
+      // Combine and sort by date
+      const combined = [...(expensesRes.data || []), ...approvedPlans].sort(
+        (a, b) => new Date(b.date) - new Date(a.date)
+      );
+
+      setRecentExpenses(combined);
     } catch (error) {
       console.error("Failed to load expenses:", error);
     } finally {
@@ -53,7 +73,10 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
   const confirmDelete = async () => {
     if (!expenseToDelete) return;
     try {
-      await API.delete(`/expenses/${expenseToDelete._id}`);
+      // Determine correct endpoint based on item type
+      const endpoint = expenseToDelete.isPlan ? `/plans/${expenseToDelete._id}` : `/expenses/${expenseToDelete._id}`;
+      await API.delete(endpoint);
+      
       setRecentExpenses(prev => prev.filter(expense => expense._id !== expenseToDelete._id));
       setExpenseToDelete(null);
       window.dispatchEvent(new Event("expensesUpdated"));
@@ -161,7 +184,6 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
                         </div>
                       </div>
                       
-                      {/* Fixed: Removed opacity-0 and group-hover classes so buttons are always visible */}
                       <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => onEditExpense && onEditExpense(expense)}

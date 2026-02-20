@@ -3,7 +3,12 @@ const mongoose = require("mongoose");
 const PlanSchema = new mongoose.Schema({
   description: { type: String, required: true },
   amount: { type: Number, required: true },
-  category: { type: String, required: true },
+  // Changed from String to ObjectId to link with Category model
+  category: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: "Category", 
+    required: true 
+  },
   priority: { 
     type: String, 
     enum: ["low", "normal", "urgent"], 
@@ -19,9 +24,9 @@ const PlanSchema = new mongoose.Schema({
     ref: "User", 
     required: true 
   },
-  notes: { type: String } // Added this since our Modal has a notes field
+  notes: { type: String }
 }, { 
-  timestamps: true // This replaces your manual createdAt field and adds updatedAt
+  timestamps: true 
 });
 
 module.exports = mongoose.model("Plan", PlanSchema);
