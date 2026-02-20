@@ -4,20 +4,27 @@ const Plan = require("../models/Plan");
 const Expense = require("../models/Expense");
 const authMiddleware = require("../middleware/auth");
 
-// GET plans (Filtered by Role)
+// GET plans
 router.get("/", authMiddleware, async (req, res) => {
   try {
     let query = {};
 
-    // ROLE LOGIC: If the user is not a manager, only show their own plans
-    if (req.user.role !== "manager") {
+    if (req.user.role === "manager") {
+      // MANAGER VIEW: 
+      // Managers need to see everything to manage the team.
+      // 1. All Pending requests (The Queue)
+      // 2. All Approved/Rejected history (The Audit Trail)
+      query = {}; // Empty object finds all plans in the collection
+    } else {
+      // STAFF/NORMAL USER VIEW: 
+      // Only see their own requests (Pending, Approved, or Rejected).
       query = { userId: req.user.id };
     }
 
     const plans = await Plan.find(query)
       .populate("userId", "username")
-      .populate("category", "name") // Added to show category name in UI
-      .sort({ createdAt: -1 }); 
+      .populate("category", "name")
+      .sort({ updatedAt: -1 });
       
     res.json(plans);
   } catch (err) {
@@ -38,10 +45,10 @@ router.post("/", authMiddleware, async (req, res) => {
     const newPlan = new Plan({
       description,
       amount,
-      category, // Storing the ObjectId from AddPlanModal
+      category, 
       priority: priority || "normal",
       notes,
-      userId: req.user.id, 
+      userId: req.user.id, // The person creating the request
       status: "pending"
     });
 
@@ -49,7 +56,7 @@ router.post("/", authMiddleware, async (req, res) => {
     
     const populatedPlan = await Plan.findById(newPlan._id)
       .populate("userId", "username")
-      .populate("category", "name"); // Added for immediate UI update
+      .populate("category", "name");
 
     res.json(populatedPlan);
   } catch (err) {
@@ -58,65 +65,53 @@ router.post("/", authMiddleware, async (req, res) => {
   }
 });
 
-// PATCH update plan status (Manager Only) + Move to Expenses
+// PATCH update plan status (Manager Only)
 router.patch("/:id/status", authMiddleware, async (req, res) => {
   try {
-    // Security Check: Only managers can approve/reject
+    // 1. Role Security Check
     if (req.user.role !== "manager") {
       return res.status(403).json({ error: "Access denied. Managers only." });
     }
 
     const { status } = req.body;
-    if (!["approved", "rejected", "pending"].includes(status)) {
-      return res.status(400).json({ error: "Invalid status" });
+    const planId = req.params.id;
+    
+    // 2. Find the Plan
+    const planToUpdate = await Plan.findById(planId);
+      
+    if (!planToUpdate) {
+      return res.status(404).json({ error: "Plan not found" });
     }
 
-    const planId = req.params.id;
-
-    // LOGIC: If approved, move to Expenses collection
-    if (status === "approved") {
-      const planToMove = await Plan.findById(planId);
-      
-      if (!planToMove) {
-        return res.status(404).json({ error: "Plan not found" });
-      }
-
-      // 1. Create the Expense record
+    // 3. Logic: If approved, convert to an Expense
+    // Important: We link the expense to the original requester (planToUpdate.userId)
+    if (status === "approved" && planToUpdate.status !== "approved") {
       const newExpense = new Expense({
-        userId: planToMove.userId,
-        categoryId: planToMove.category, // This works because Plan now stores ObjectId
-        amount: planToMove.amount,
-        description: planToMove.description,
-        notes: planToMove.notes || '',
+        userId: planToUpdate.userId, 
+        categoryId: planToUpdate.category, 
+        amount: planToUpdate.amount,
+        description: `[Approved] ${planToUpdate.description}`,
+        notes: planToUpdate.notes || `Approved by ${req.user.username}`,
         date: new Date()
       });
 
       await newExpense.save();
-
-      // 2. Delete the Plan from the queue
-      await Plan.findByIdAndDelete(planId);
-
-      return res.json({ 
-        message: "Plan approved and moved to expenses", 
-        status: "approved",
-        movedToExpenses: true 
-      });
     }
 
-    // Normal behavior for Rejection or Pending
+    // 4. Update the Plan status
     const updatedPlan = await Plan.findByIdAndUpdate(
       planId,
       { status },
       { new: true }
     )
     .populate("userId", "username")
-    .populate("category", "name"); // Added to keep UI consistent on status change
+    .populate("category", "name");
 
-    if (!updatedPlan) {
-      return res.status(404).json({ error: "Plan not found" });
-    }
+    res.json({ 
+      message: status === "approved" ? "Plan approved and added to expenses" : `Plan marked as ${status}`, 
+      plan: updatedPlan 
+    });
 
-    res.json(updatedPlan);
   } catch (err) {
     console.error("PATCH Status Error:", err);
     res.status(500).json({ error: "Failed to update status" });

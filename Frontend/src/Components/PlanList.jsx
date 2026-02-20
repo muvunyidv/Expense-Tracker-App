@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ListChecks, Clock, CheckCircle2, XCircle, Plus, Loader2, ClipboardList, Check, X } from "lucide-react";
+import { ListChecks, Clock, CheckCircle2, XCircle, Plus, Loader2, ClipboardList, Check, X, History, User2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
 import { AddPlanModal } from "./AddPlanModal"; 
 import API from "../api";
@@ -9,26 +9,26 @@ export function PlanList() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [userRole, setUserRole] = useState("staff");
+  const [userData, setUserData] = useState({ role: "staff", id: null });
+  const [currentFilter, setCurrentFilter] = useState("pending");
 
-  // Clean up URL hash on mount
   useEffect(() => {
-    if (window.location.hash) {
+    // Clear any messy hashes in the URL
+    if (window.location.hash && window.location.hash !== "#plans") {
       window.history.replaceState(null, "", window.location.pathname);
     }
-  }, []);
 
-  // Parse user role from token
-  useEffect(() => {
+    // Decode token to get current user info
     const token = localStorage.getItem("token");
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split(".")[1]));
-        setUserRole(payload.role || "staff");
+        setUserData({ role: payload.role || "staff", id: payload.id });
       } catch (e) {
         console.error("Token parse error", e);
       }
     }
+    fetchData();
   }, []);
 
   const fetchData = async () => {
@@ -47,23 +47,22 @@ export function PlanList() {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const handleStatusUpdate = async (id, newStatus) => {
     try {
       await API.patch(`/plans/${id}/status`, { status: newStatus });
-      // Important: If approved, it is deleted from Plans and moved to Expenses
-      // Refreshing data will remove it from this view.
-      fetchData(); 
       
-      // Dispatch event so Dashboard total updates if approved
+      // Update local state immediately for snappy UI
+      setPlans(prev => prev.map(p => p._id === id ? { ...p, status: newStatus } : p));
+      
+      // If approved, notify the dashboard to refresh the total expenses
       if (newStatus === 'approved') {
         window.dispatchEvent(new Event("expensesUpdated"));
       }
+      
+      // Refresh data to ensure all ownership logic is synced
+      fetchData();
     } catch (error) {
-      alert("Failed to update status");
+      alert("Action failed: Only managers can update status.");
     }
   };
 
@@ -78,110 +77,137 @@ export function PlanList() {
     }
   };
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case "urgent": return "text-red-600 dark:text-red-400 font-black";
-      case "low": return "text-zinc-400 font-medium";
-      default: return "text-zinc-600 dark:text-zinc-300 font-medium";
-    }
-  };
-
-  // Only show Pending items in the main queue
-  const pendingPlans = plans.filter(p => p.status === 'pending');
+  // Filter the list based on selection
+  const filteredPlans = plans.filter(p => p.status === currentFilter);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-foreground uppercase">Requirements</h1>
-          <p className="text-sm text-muted-foreground">
-            {userRole === 'manager' ? "Review and manage incoming requests" : "Items awaiting approval"}
+          <h1 className="text-3xl font-black tracking-tight text-foreground uppercase">
+            {userData.role === "manager" ? "Approval Queue" : "My Requests"}
+          </h1>
+          <p className="text-sm text-muted-foreground italic">
+            {userData.role === "manager" 
+              ? "Review staff requirements or track your own history" 
+              : "Submit new spending requirements for approval"}
           </p>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-2xl transition-all font-bold shadow-lg shadow-orange-500/20 active:scale-95"
+          className="flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-2xl transition-all font-bold shadow-lg shadow-orange-500/20 active:scale-95"
         >
           <Plus className="w-5 h-5" /> New Request
         </button>
       </div>
 
+      {/* STATS CARDS / FILTERS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl flex justify-between items-center">
-          <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">In Queue</span>
-          <span className="text-xl font-black">{pendingPlans.length}</span>
-        </div>
-        <div className="p-4 bg-green-500/5 border border-green-500/20 rounded-2xl flex justify-between items-center">
-          <span className="text-xs font-bold text-green-600 uppercase tracking-wider">Approved Today</span>
-          <span className="text-xl font-black">{plans.filter(p => p.status === 'approved').length}</span>
-        </div>
-        <div className="p-4 bg-muted rounded-2xl flex justify-between items-center">
-          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Queue Value</span>
-          <span className="text-xl font-black text-foreground">
-            {pendingPlans.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0).toLocaleString()} <span className="text-xs font-normal">Rwf</span>
-          </span>
-        </div>
+        {[
+          { id: "pending", label: "Pending", icon: Clock, color: "amber" },
+          { id: "approved", label: "Approved", icon: CheckCircle2, color: "green" },
+          { id: "rejected", label: "Rejected", icon: XCircle, color: "red" }
+        ].map((card) => {
+          const Icon = card.icon;
+          const isActive = currentFilter === card.id;
+          return (
+            <button 
+              key={card.id}
+              onClick={() => setCurrentFilter(card.id)}
+              className={`p-4 border rounded-2xl flex justify-between items-center transition-all text-left ${
+                isActive 
+                ? `bg-${card.color}-500/10 border-${card.color}-500 ring-2 ring-${card.color}-500/20 shadow-lg` 
+                : "bg-muted/50 border-transparent hover:border-gray-300 dark:hover:border-zinc-700"
+              }`}
+            >
+              <div>
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${isActive ? `text-${card.color}-600` : "text-muted-foreground"}`}>
+                  {card.label}
+                </span>
+                <div className="text-2xl font-black text-foreground">
+                  {plans.filter(p => p.status === card.id).length}
+                </div>
+              </div>
+              <Icon className={`w-8 h-8 ${isActive ? `text-${card.color}-500` : "text-muted-foreground/30"}`} />
+            </button>
+          );
+        })}
       </div>
 
       <Card className="border-gray-300/60 dark:border-zinc-700/60 shadow-xl overflow-hidden">
         <CardHeader className="border-b border-border/50 bg-muted/20">
           <CardTitle className="text-lg flex items-center gap-2">
-            <ListChecks className="w-5 h-5 text-orange-500" />
-            Requirement Queue
+            {currentFilter === 'pending' ? <ListChecks className="w-5 h-5 text-orange-500" /> : <History className="w-5 h-5 text-orange-500" />}
+            <span className="capitalize">{currentFilter}</span> Items
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
             <div className="flex flex-col items-center py-20"><Loader2 className="w-10 h-10 animate-spin text-orange-500" /></div>
-          ) : pendingPlans.length === 0 ? (
+          ) : filteredPlans.length === 0 ? (
             <div className="text-center py-20">
               <ClipboardList className="w-12 h-12 text-muted/30 mx-auto mb-4" />
-              <p className="text-muted-foreground font-medium">All caught up! No pending requirements.</p>
+              <p className="text-muted-foreground font-medium">No items found in this category.</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-100 dark:divide-zinc-800">
-              {pendingPlans.map((plan) => {
+              {filteredPlans.map((plan) => {
                 const ui = getStatusUI(plan.status);
+                const isOwnRequest = plan.userId?._id === userData.id;
+
                 return (
-                  <div key={plan._id} className="flex items-center justify-between p-5 hover:bg-muted/30 transition-colors group">
+                  <div key={plan._id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 hover:bg-muted/30 transition-colors group gap-4">
                     <div className="flex items-center gap-4">
-                      <div className={`p-3 rounded-xl ${ui.color}`}>{ui.icon}</div>
+                      <div className={`p-3 rounded-xl shrink-0 ${ui.color}`}>{ui.icon}</div>
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                            <span className="font-bold text-foreground">{plan.description}</span>
                            {plan.priority === 'urgent' && <span className="text-[9px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-black uppercase">Urgent</span>}
+                           {isOwnRequest && <span className="text-[9px] bg-blue-500/10 text-blue-600 px-1.5 py-0.5 rounded-full font-bold border border-blue-200 uppercase">My Request</span>}
                         </div>
                         <div className="text-[11px] text-muted-foreground flex items-center gap-2 mt-0.5 uppercase font-medium">
-                          {/* FIXED: Using .name because category is now a populated object */}
-                          <span className="text-orange-500 font-bold">{plan.category?.name || "Uncategorized"}</span>
+                          <span className="text-orange-500 font-bold">{plan.category?.name || "General"}</span>
                           <span className="opacity-30">•</span>
-                          <span>{plan.userId?.username || "Staff"}</span>
+                          <span className="flex items-center gap-1">
+                            <User2 className="w-3 h-3" />
+                            {plan.userId?.username || "Unknown"}
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-6">
-                      <div className="text-right">
-                        <div className="font-black text-foreground text-lg">{plan.amount?.toLocaleString()} Rwf</div>
-                        <div className={`text-[10px] uppercase font-black ${getPriorityColor(plan.priority)}`}>{plan.priority}</div>
+                    <div className="flex items-center justify-between sm:justify-end gap-6 border-t sm:border-t-0 pt-4 sm:pt-0">
+                      <div className="text-left sm:text-right">
+                        <div className="font-black text-foreground text-lg">{plan.amount?.toLocaleString()} <span className="text-xs">Rwf</span></div>
+                        <div className={`text-[10px] uppercase font-black ${plan.priority === 'urgent' ? 'text-red-500' : 'text-zinc-400'}`}>
+                          {plan.priority} Priority
+                        </div>
                       </div>
 
-                      {userRole === "manager" && (
-                        <div className="flex gap-2 ml-4">
+                      {/* ACTIONS: Manager can approve/reject anyone's request except their own (to avoid self-approval fraud) */}
+                      {userData.role === "manager" && plan.status === "pending" && (
+                        <div className="flex gap-2">
                           <button 
                             onClick={() => handleStatusUpdate(plan._id, 'approved')}
-                            className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors shadow-md shadow-green-500/20"
-                            title="Approve & move to Expenses"
+                            className="p-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 active:scale-90"
+                            title="Approve"
                           >
-                            <Check className="w-4 h-4" />
+                            <Check className="w-5 h-5" />
                           </button>
                           <button 
                             onClick={() => handleStatusUpdate(plan._id, 'rejected')}
-                            className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-md shadow-red-500/20"
-                            title="Reject Request"
+                            className="p-2.5 bg-zinc-200 dark:bg-zinc-800 text-foreground rounded-xl hover:bg-red-500 hover:text-white transition-all active:scale-90"
+                            title="Reject"
                           >
-                            <X className="w-4 h-4" />
+                            <X className="w-5 h-5" />
                           </button>
+                        </div>
+                      )}
+
+                      {/* DATE: Only show for finalized items */}
+                      {plan.status !== "pending" && (
+                        <div className="text-[10px] bg-muted px-2 py-1 rounded-lg text-muted-foreground font-bold">
+                          {new Date(plan.updatedAt).toLocaleDateString('en-GB')}
                         </div>
                       )}
                     </div>

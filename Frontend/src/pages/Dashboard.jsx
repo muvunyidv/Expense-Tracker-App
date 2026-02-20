@@ -13,7 +13,7 @@ import {
   SidebarInset,
   useSidebar,
 } from "../Components/ui/sidebar";
-import { LogOut, PlusCircle, User, ArrowRight, Wallet, ClipboardList } from "lucide-react";
+import { LogOut, PlusCircle, User, ArrowRight, Wallet, ShieldCheck } from "lucide-react";
 
 function DashboardContent({ 
   onLogout, user, totalExpenses, searchQuery, setSearchQuery, 
@@ -34,8 +34,8 @@ function DashboardContent({
             <div className="max-w-7xl mx-auto grid grid-cols-3 items-center px-4 md:px-6 py-3">
               <div className="flex items-center gap-2">
                 <span className="md:hidden"><SidebarTrigger /></span>
-                <a href="#summary" className="hidden md:flex items-center gap-2">
-                  <span className="inline-block h-6 w-6 rounded-md bg-orange-500 shadow-sm shadow-orange-500/50" />
+                <a href="#summary" className="hidden md:flex items-center gap-2 group">
+                  <span className="inline-block h-6 w-6 rounded-md bg-orange-500 shadow-sm shadow-orange-500/50 group-hover:rotate-12 transition-transform" />
                   <span className="text-lg font-bold tracking-tight text-foreground">Expense Tracker</span>
                 </a>
               </div>
@@ -45,15 +45,23 @@ function DashboardContent({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search..."
+                  placeholder="Search your records..."
                   className="w-full px-4 py-2 rounded-full border border-border bg-muted/50 focus:bg-background focus:ring-2 focus:ring-orange-500 outline-none transition-all text-sm"
                 />
               </div>
 
               <div className="flex items-center gap-3 justify-self-end relative" ref={menuRef}>
+                {/* ROLE BADGE: Shows if the user is a manager */}
+                {user?.role === "manager" && !isMobile && (
+                  <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full border border-blue-200 dark:border-blue-800">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span className="text-[10px] font-bold uppercase tracking-tight">Manager</span>
+                  </div>
+                )}
+
                 <button 
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="h-9 w-9 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-sm shadow-md hover:scale-105 transition-transform active:scale-95"
+                  className="h-9 w-9 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-sm shadow-md hover:scale-105 transition-transform active:scale-95 ring-2 ring-offset-2 ring-transparent hover:ring-orange-500/20"
                 >
                   {userInitial}
                 </button>
@@ -82,32 +90,32 @@ function DashboardContent({
           <div className="flex-1 bg-background p-6">
             <div className="max-w-7xl mx-auto space-y-6">
               
-              {/* Dynamic Page Rendering */}
               {currentPage === "#categories" ? (
                 <Categories onCategoriesChange={fetchCategories} />
               ) : currentPage === "#plans" ? (
                 <PlanList /> 
               ) : (
                 <>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                      <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-                      <p className="text-muted-foreground mt-1">{description}</p>
+                      <h1 className="text-3xl font-extrabold tracking-tight text-foreground">{title}</h1>
+                      <p className="text-muted-foreground mt-1 text-sm">{description}</p>
                     </div>
                     <button 
                       onClick={handleOpenAddForm}
                       disabled={categories.length === 0}
-                      className={`flex items-center gap-2 px-5 py-2.5 rounded-[10px] font-bold transition-all shadow-lg active:scale-95 ${
+                      className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all shadow-lg active:scale-95 ${
                         categories.length === 0 
                         ? "bg-muted text-muted-foreground cursor-not-allowed opacity-60" 
                         : "bg-orange-500 text-white hover:bg-orange-600 shadow-orange-500/30"
                       }`}
                     >
                       <PlusCircle className="w-5 h-5" />
-                      Add Expense
+                      Add Personal Expense
                     </button>
                   </div>
 
+                  {/* Clean Expense List: Handles searching and display */}
                   <ExpenseList 
                     searchQuery={searchQuery} 
                     onEditExpense={handleEditClick}
@@ -115,11 +123,11 @@ function DashboardContent({
                   />
 
                   {categories.length === 0 && (
-                    <div className="text-center py-4 animate-in fade-in duration-700">
+                    <div className="text-center py-8 bg-muted/20 rounded-2xl border border-dashed border-border animate-in fade-in duration-700">
                       <p className="text-sm text-muted-foreground">
                         You need to create categories first.{" "}
-                        <a href="#categories" className="text-orange-500 font-semibold hover:text-orange-600 transition-colors inline-flex items-center gap-0.5">
-                          Create a category <ArrowRight className="w-3.5 h-3.5" />
+                        <a href="#categories" className="text-orange-500 font-bold hover:underline inline-flex items-center gap-0.5">
+                          Set up categories <ArrowRight className="w-3.5 h-3.5" />
                         </a>
                       </p>
                     </div>
@@ -132,15 +140,14 @@ function DashboardContent({
         <Footer />
       </SidebarInset>
 
+      {/* Floating Mobile Stats Card */}
       {isMobile && !openMobile && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <div className="flex items-center gap-3 px-5 py-3 bg-zinc-900/95 dark:bg-orange-600 text-white rounded-2xl shadow-2xl border border-white/10 backdrop-blur-md">
-            <div className="p-2 bg-white/20 rounded-lg">
-              <Wallet className="w-4 h-4 text-white" />
-            </div>
+          <div className="flex items-center gap-3 px-6 py-3 bg-zinc-900/95 dark:bg-orange-600 text-white rounded-2xl shadow-2xl border border-white/10 backdrop-blur-md">
+            <Wallet className="w-5 h-5 text-white/80" />
             <div className="flex flex-col">
-              <span className="text-[9px] font-bold uppercase tracking-wider opacity-80">Total Spent</span>
-              <span className="text-sm font-black tracking-tight">
+              <span className="text-[10px] font-bold uppercase tracking-wider opacity-70">Personal Total</span>
+              <span className="text-base font-black tracking-tight">
                 {totalExpenses.toLocaleString()} <span className="text-[10px]">Rwf</span>
               </span>
             </div>
@@ -163,10 +170,11 @@ export default function Dashboard({ onLogout }) {
   const [totalExpenses, setTotalExpenses] = useState(0); 
   const menuRef = useRef(null);
 
+  // FETCH: Only real expenses (which now includes approved plans via the backend move)
   const fetchTotal = async () => {
     try {
       const res = await API.get("/expenses");
-      const total = res.data.reduce((acc, curr) => acc + curr.amount, 0);
+      const total = res.data.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
       setTotalExpenses(total);
     } catch (err) {
       console.error("Failed to fetch total", err);
@@ -176,6 +184,7 @@ export default function Dashboard({ onLogout }) {
   useEffect(() => {
     const onHashChange = () => {
       setCurrentPage(window.location.hash || "#summary");
+      setIsUserMenuOpen(false); // Close menu on navigation
     };
 
     window.addEventListener("hashchange", onHashChange);
@@ -202,7 +211,9 @@ export default function Dashboard({ onLogout }) {
     try {
       const res = await API.get("/auth/me");
       setUser(res.data);
-    } catch (err) {}
+    } catch (err) {
+      console.error("Auth failed", err);
+    }
   };
 
   const fetchCategories = async () => {
@@ -213,7 +224,7 @@ export default function Dashboard({ onLogout }) {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem("user");
+    sessionStorage.removeItem("token"); // Assuming you use tokens
     if (typeof onLogout === "function") onLogout();
   };
 
@@ -224,6 +235,7 @@ export default function Dashboard({ onLogout }) {
       } else {
         await API.post("/expenses", expenseData);
       }
+      // This event triggers fetchTotal() and updates the ExpenseList
       window.dispatchEvent(new Event("expensesUpdated"));
       setIsFormOpen(false);
       setEditingExpense(null);
@@ -235,11 +247,11 @@ export default function Dashboard({ onLogout }) {
   const { title, description } = (function getPageTitle() {
     switch (currentPage) {
       case "#categories":
-        return { title: "Categories", description: "Manage your expense categories" };
+        return { title: "Categories", description: "Organize your spending habits" };
       case "#plans":
-        return { title: "Future Plans", description: "Draft requirements for approval" };
+        return { title: "Work Requirements", description: "Submit and track budget approvals" };
       default:
-        return { title: "Expense Tracker", description: "Track and manage your expenses" };
+        return { title: "My Dashboard", description: "Overview of your personal and approved work spending" };
     }
   })();
 
