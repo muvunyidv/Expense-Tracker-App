@@ -3,13 +3,20 @@ const router = express.Router();
 const Plan = require("../models/Plan");
 const authMiddleware = require("../middleware/auth");
 
-// GET all plans
+// GET plans (Filtered by Role)
 router.get("/", authMiddleware, async (req, res) => {
   try {
-    // Sorting by newest first (-1)
-    const plans = await Plan.find()
+    let query = {};
+
+    // ROLE LOGIC: If the user is not a manager, only show their own plans
+    if (req.user.role !== "manager") {
+      query = { userId: req.user.id };
+    }
+
+    const plans = await Plan.find(query)
       .populate("userId", "username")
       .sort({ createdAt: -1 }); 
+      
     res.json(plans);
   } catch (err) {
     console.error("GET Plans Error:", err);
@@ -22,7 +29,6 @@ router.post("/", authMiddleware, async (req, res) => {
   try {
     const { description, amount, category, priority, notes } = req.body;
     
-    // Validation: ensure required fields are present
     if (!description || !amount || !category) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -33,18 +39,47 @@ router.post("/", authMiddleware, async (req, res) => {
       category,
       priority: priority || "normal",
       notes,
-      userId: req.user.id, // Set by your auth middleware
-      status: "pending"    // Default status for new requests
+      userId: req.user.id, 
+      status: "pending"
     });
 
     await newPlan.save();
     
-    // Populate username before sending back so UI updates smoothly
     const populatedPlan = await Plan.findById(newPlan._id).populate("userId", "username");
     res.json(populatedPlan);
   } catch (err) {
     console.error("POST Plan Error:", err);
     res.status(500).json({ error: "Failed to create plan" });
+  }
+});
+
+// PATCH update plan status (Manager Only)
+router.patch("/:id/status", authMiddleware, async (req, res) => {
+  try {
+    // Security Check: Only managers can approve/reject
+    if (req.user.role !== "manager") {
+      return res.status(403).json({ error: "Access denied. Managers only." });
+    }
+
+    const { status } = req.body;
+    if (!["approved", "rejected", "pending"].includes(status)) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
+
+    const updatedPlan = await Plan.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    ).populate("userId", "username");
+
+    if (!updatedPlan) {
+      return res.status(404).json({ error: "Plan not found" });
+    }
+
+    res.json(updatedPlan);
+  } catch (err) {
+    console.error("PATCH Status Error:", err);
+    res.status(500).json({ error: "Failed to update status" });
   }
 });
 

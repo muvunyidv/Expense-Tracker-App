@@ -8,30 +8,37 @@ const router = express.Router();
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { email, phonenumber, username, password } = req.body;
+    // 1. Added 'role' to the destructuring to capture it from the frontend
+    const { email, phonenumber, username, password, role } = req.body;
 
     if (!email || !phonenumber || !username || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    // Check for existing email
     const existingEmail = await User.findOne({ email });
     if (existingEmail) {
       return res.status(409).json({ error: 'Email already registered' });
     }
 
-    // Check for existing username
     const existingUsername = await User.findOne({ username });
     if (existingUsername) {
       return res.status(409).json({ error: 'Username already exists' });
     }
 
-    // Create user
-    const user = new User({ email, phonenumber, username, password });
+    // 2. Pass 'role' to the new User instance
+    const user = new User({ 
+      email, 
+      phonenumber, 
+      username, 
+      password, 
+      role: role || 'staff' // Fallback to staff if role is missing
+    });
+    
     await user.save();
 
+    // 3. IMPORTANT: Include 'role' in the JWT payload so the frontend can read it
     const token = jwt.sign(
-      { id: user._id },
+      { id: user._id, username: user.username, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -42,7 +49,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login - Updated to accept email OR phonenumber as 'identifier'
+// Login
 router.post('/login', async (req, res) => {
   try {
     const { identifier, password } = req.body;
@@ -51,8 +58,6 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email/Phone and password are required' });
     }
 
-    // 
-    // Search the database for a user where identifier matches EITHER email OR phonenumber
     const user = await User.findOne({
       $or: [
         { email: identifier },
@@ -69,8 +74,9 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // 4. Also include 'role' in the login token
     const token = jwt.sign(
-      { id: user._id, username: user.username }, 
+      { id: user._id, username: user.username, role: user.role }, 
       process.env.JWT_SECRET, 
       { expiresIn: '24h' }
     );

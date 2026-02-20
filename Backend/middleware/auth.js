@@ -11,12 +11,17 @@ const authMiddleware = (req, res, next) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Defensive check: ensure the token actually contains an ID
+    // Defensive check: ensure the token contains necessary info
     if (!decoded.id) {
       return res.status(401).json({ error: 'Invalid token payload' });
     }
 
-    req.user = { id: decoded.id };
+    // UPDATED: Now passing both ID and ROLE to the rest of the app
+    req.user = { 
+      id: decoded.id,
+      role: decoded.role // This allows req.user.role to work in planRoutes.js
+    };
+
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {

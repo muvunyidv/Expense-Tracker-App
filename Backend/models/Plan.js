@@ -16,10 +16,12 @@ const PlanSchema = new mongoose.Schema({
   },
   userId: { 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: "User", // This links the plan to the staff member who created it
+    ref: "User", 
     required: true 
   },
-  createdAt: { type: Date, default: Date.now }
+  notes: { type: String } // Added this since our Modal has a notes field
+}, { 
+  timestamps: true // This replaces your manual createdAt field and adds updatedAt
 });
 
-module.exports = mongoose.model("Plan", PlanSchema);    
+module.exports = mongoose.model("Plan", PlanSchema);
