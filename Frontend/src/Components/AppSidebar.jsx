@@ -1,5 +1,17 @@
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Tags, Wallet, ClipboardList, Users, Copy, Check, UserCircle, ShieldCheck, User } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  Tags, 
+  Wallet, 
+  ClipboardList, 
+  Users, 
+  Copy, 
+  Check, 
+  UserCircle, 
+  ShieldCheck, 
+  User, 
+  ListTodo // New Icon for Todo
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,10 +24,12 @@ import {
   useSidebar, 
 } from "./ui/sidebar";
 
+// Updated menu items to include the new Todo logic
 const menuItems = [
   { title: "Summary", icon: LayoutDashboard, url: "#summary" },
   { title: "Categories", icon: Tags, url: "#categories" },
-  { title: "Plans", icon: ClipboardList, url: "#plans" },
+  { title: "Requests", icon: ClipboardList, url: "#plans" }, // Old plan files now requests
+  { title: "Plans", icon: ListTodo, url: "#todos" },        // New Todo feature
 ];
 
 export function AppSidebar({ total = 0, user = {} }) {
@@ -108,7 +122,7 @@ export function AppSidebar({ total = 0, user = {} }) {
           </SidebarGroup>
 
           <div className="mt-auto p-4 space-y-4">
-            {/* RECRUIT STAFF - Hidden for Normal Users */}
+            {/* RECRUIT STAFF */}
             {isManager && user?.inviteCode && (
               <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-4 shadow-lg shadow-orange-100 animate-in slide-in-from-left duration-500">
                 <div className="flex items-center gap-2 mb-3">
@@ -133,7 +147,6 @@ export function AppSidebar({ total = 0, user = {} }) {
             {/* TOTAL WIDGET */}
             <div className="relative overflow-hidden rounded-2xl p-5 shadow-xl bg-orange-600 shadow-orange-500/30 active:scale-95 transition-all">
               <div className="absolute -right-2 -top-2 h-16 w-16 rounded-full bg-white/10 blur-xl" />
-              
               <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-1.5 rounded-lg bg-white/20">
@@ -143,7 +156,6 @@ export function AppSidebar({ total = 0, user = {} }) {
                     {isManager ? "Organization Total" : isPersonalUser ? "Total Spent" : "My Total Expenses"}
                   </span>
                 </div>
-                
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-2xl font-black text-white tracking-tight">
                     {total.toLocaleString()}

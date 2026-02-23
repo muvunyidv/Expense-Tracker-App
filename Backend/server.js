@@ -10,7 +10,8 @@ const connectDB = require('./db');
 const authRoutes = require('./routes/auth');
 const categoriesRoutes = require('./routes/categories');
 const expensesRoutes = require('./routes/expenses');
-const planRoutes = require('./routes/planRoutes'); // Matches your planRoutes.js filename
+const planRoutes = require('./routes/planRoutes'); 
+const todos = require('./routes/todos'); // NEW: Import todo routes
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -26,11 +27,11 @@ app.use(cors({
 }));
 
 // Routes 
-// Ensure these prefixes match what you use in your frontend API utility
 app.use('/api/auth', authRoutes);
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/expenses', expensesRoutes);
-app.use('/api/plans', planRoutes); // Mounts all plan-related logic to /api/plans
+app.use('/api/plans', planRoutes); // Existing Requests/Plans logic
+app.use('/api/todos', todos);  // NEW: Matches the frontend API.get("/todos")
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -46,7 +47,7 @@ app.use((req, res) => {
   res.status(404).json({ error: `Route ${req.originalUrl} not found` });
 });
 
-// Global Error handling middleware - Catches any syntax or database errors
+// Global Error handling middleware
 app.use((err, req, res, next) => {
   console.error('SERVER_ERROR:', err.stack);
   res.status(500).json({ 

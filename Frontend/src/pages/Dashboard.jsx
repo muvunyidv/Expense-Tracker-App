@@ -6,6 +6,8 @@ import { AddExpenseForm } from "../Components/AddExpenseForm";
 import { ExpenseViewModal } from "../Components/ExpenseViewModal";
 import { Categories } from "./Categories";
 import { PlanList } from "../Components/PlanList"; 
+// Ensure you have created this file as TodoPage.jsx
+import TodoPage from "./TodoPage"; 
 import API from "../api";
 import {
   SidebarProvider,
@@ -54,7 +56,6 @@ function DashboardContent({
               </div>
 
               <div className="flex items-center gap-3 justify-self-end relative" ref={menuRef}>
-                {/* ROLE BADGE: Dynamic per role */}
                 {!isMobile && (
                   <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border animate-in fade-in zoom-in-90 ${
                     user?.role === "manager" 
@@ -103,6 +104,8 @@ function DashboardContent({
                 <Categories onCategoriesChange={fetchCategories} />
               ) : currentPage === "#plans" ? (
                 <PlanList /> 
+              ) : currentPage === "#todos" ? (
+                <TodoPage />
               ) : (
                 <>
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -267,9 +270,16 @@ export default function Dashboard({ onLogout, user: initialUser }) {
           description: isPersonalUser ? "How you group your personal spending" : "Organize team spending habits" 
         };
       case "#plans":
+        // Updated to "Requests" per instructions
         return { 
-          title: isPersonalUser ? "Budget Plans" : "Work Requirements", 
+          title: "Requests", 
           description: isPersonalUser ? "Future spending goals" : "Submit and track budget approvals" 
+        };
+      case "#todos":
+        // New Title for the Todo feature
+        return { 
+          title: "Planned Strategy", 
+          description: "Organize tasks and project timelines" 
         };
       default:
         return { 
