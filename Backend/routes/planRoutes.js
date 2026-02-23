@@ -4,7 +4,7 @@ const Plan = require("../models/Plan");
 const Expense = require("../models/Expense");
 const authMiddleware = require("../middleware/auth");
 
-// GET plans (Filtered by Silo)
+// 1. GET plans (Filtered by Silo)
 router.get("/", authMiddleware, async (req, res) => {
   try {
     let query = { tenantId: req.user.tenantId };
@@ -16,7 +16,7 @@ router.get("/", authMiddleware, async (req, res) => {
     const plans = await Plan.find(query)
       .populate("userId", "username")
       .populate("category", "name")
-      .populate("reviewedBy", "username") // Added to see who reviewed it
+      .populate("reviewedBy", "username")
       .sort({ updatedAt: -1 });
       
     res.json(plans);
@@ -26,7 +26,7 @@ router.get("/", authMiddleware, async (req, res) => {
   }
 });
 
-// POST a new plan (No changes needed here, approvedAmount defaults to 0)
+// 2. POST a new plan
 router.post("/", authMiddleware, async (req, res) => {
   try {
     const { description, amount, category, priority, notes } = req.body;
@@ -59,14 +59,73 @@ router.post("/", authMiddleware, async (req, res) => {
   }
 });
 
-// PATCH update plan status & amount (Manager Only)
+/**
+ * 3. PATCH update plan (General Edit)
+ * This fixes the "Route not found" error when clicking "Update Request"
+ */
+router.patch("/:id", authMiddleware, async (req, res) => {
+  try {
+    const { description, amount, category, priority, notes } = req.body;
+    
+    // Ensure the user owns the plan OR is a manager
+    let query = { _id: req.params.id, tenantId: req.user.tenantId };
+    if (req.user.role !== "manager") {
+      query.userId = req.user.id;
+    }
+
+    const plan = await Plan.findOne(query);
+    if (!plan) {
+      return res.status(404).json({ error: "Plan not found or unauthorized" });
+    }
+
+    // Only allow editing if it's still pending
+    if (plan.status !== "pending" && req.user.role !== "manager") {
+      return res.status(400).json({ error: "Cannot edit a request that has already been reviewed" });
+    }
+
+    const updatedPlan = await Plan.findByIdAndUpdate(
+      req.params.id,
+      { description, amount, category, priority, notes },
+      { new: true }
+    ).populate("userId", "username").populate("category", "name");
+
+    res.json(updatedPlan);
+  } catch (err) {
+    console.error("PATCH Plan Error:", err);
+    res.status(500).json({ error: "Failed to update plan" });
+  }
+});
+
+// 4. DELETE a plan
+router.delete("/:id", authMiddleware, async (req, res) => {
+  try {
+    let query = { _id: req.params.id, tenantId: req.user.tenantId };
+    
+    // Users can only delete their own plans; managers can delete any in their tenant
+    if (req.user.role !== "manager") {
+      query.userId = req.user.id;
+    }
+
+    const plan = await Plan.findOneAndDelete(query);
+    
+    if (!plan) {
+      return res.status(404).json({ error: "Plan not found or unauthorized" });
+    }
+
+    res.json({ message: "Plan deleted successfully" });
+  } catch (err) {
+    console.error("DELETE Plan Error:", err);
+    res.status(500).json({ error: "Failed to delete plan" });
+  }
+});
+
+// 5. PATCH update plan status & amount (Manager Decision)
 router.patch("/:id/status", authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== "manager") {
       return res.status(403).json({ error: "Access denied. Managers only." });
     }
 
-    // Capture the new fields from the manager's input
     const { status, approvedAmount, managerComment } = req.body;
     const planId = req.params.id;
     
@@ -76,16 +135,14 @@ router.patch("/:id/status", authMiddleware, async (req, res) => {
       return res.status(404).json({ error: "Plan not found in your workspace" });
     }
 
-    // LOGIC: If approved, convert to an Expense using the APPROVED amount
     if (status === "approved" && planToUpdate.status !== "approved") {
-      // Use the provided approvedAmount, or fallback to full amount if not provided
       const finalAmount = approvedAmount !== undefined ? approvedAmount : planToUpdate.amount;
 
       const newExpense = new Expense({
         tenantId: planToUpdate.tenantId,
         userId: planToUpdate.userId,    
         categoryId: planToUpdate.category, 
-        amount: finalAmount, // CRITICAL: This is the updated amount
+        amount: finalAmount,
         description: `[Req-Approved] ${planToUpdate.description}`,
         notes: managerComment || `Approved by ${req.user.username}`,
         date: new Date()
@@ -94,14 +151,13 @@ router.patch("/:id/status", authMiddleware, async (req, res) => {
       await newExpense.save();
     }
 
-    // Update the Plan with the decision details
     const updatedPlan = await Plan.findByIdAndUpdate(
       planId,
       { 
         status, 
         approvedAmount: status === "approved" ? (approvedAmount || planToUpdate.amount) : 0,
         managerComment,
-        reviewedBy: req.user.id // Track the manager
+        reviewedBy: req.user.id 
       },
       { new: true }
     )

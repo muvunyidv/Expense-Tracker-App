@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { X, ClipboardList, AlertCircle, Loader2, Banknote, Tag, MessageSquare } from "lucide-react";
+import { X, ClipboardList, AlertCircle, Loader2, Banknote, Tag, MessageSquare, Edit3 } from "lucide-react";
 import API from "../api";
 
-export function AddPlanModal({ isOpen, onClose, categories = [], onSuccess }) {
+export function AddPlanModal({ isOpen, onClose, categories = [], onSuccess, editData = null }) {
   const [formData, setFormData] = useState({
     description: "",
     amount: "",
@@ -12,17 +12,32 @@ export function AddPlanModal({ isOpen, onClose, categories = [], onSuccess }) {
   });
   const [loading, setLoading] = useState(false);
 
+  // Determine if we are in Edit Mode
+  const isEditing = !!editData;
+
   useEffect(() => {
-    if (!isOpen) {
-      setFormData({
-        description: "",
-        amount: "",
-        category: "", 
-        priority: "normal",
-        notes: ""
-      });
+    if (isOpen) {
+      if (editData) {
+        // Pre-fill form with existing data for Editing
+        setFormData({
+          description: editData.description || "",
+          amount: editData.amount || "",
+          category: editData.category?._id || editData.category || "", 
+          priority: editData.priority || "normal",
+          notes: editData.notes || ""
+        });
+      } else {
+        // Reset form for New Request
+        setFormData({
+          description: "",
+          amount: "",
+          category: "", 
+          priority: "normal",
+          notes: ""
+        });
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, editData]);
 
   if (!isOpen) return null;
 
@@ -38,18 +53,23 @@ export function AddPlanModal({ isOpen, onClose, categories = [], onSuccess }) {
       const submissionData = {
         ...formData,
         amount: Number(formData.amount),
-        // Ensuring status is lowercase to match our list filters
         status: "pending",
-        // Default approvedAmount to requested amount for easier manager workflow
         approvedAmount: Number(formData.amount) 
       };
 
-      await API.post("/plans", submissionData);
+      if (isEditing) {
+        // Update existing plan using PATCH
+        await API.patch(`/plans/${editData._id}`, submissionData);
+      } else {
+        // Create new plan using POST
+        await API.post("/plans", submissionData);
+      }
+
       onSuccess(); 
       onClose();   
     } catch (error) {
       console.error("Submission error:", error);
-      alert(error.response?.data?.error || "Failed to submit request");
+      alert(error.response?.data?.error || "Failed to process request");
     } finally {
       setLoading(false);
     }
@@ -57,18 +77,24 @@ export function AddPlanModal({ isOpen, onClose, categories = [], onSuccess }) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      {/* White background for the modal container */}
       <div className="bg-white border border-zinc-200 w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         
         {/* Header */}
         <div className="p-8 pb-4 flex justify-between items-start">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
+              {/* Icon container always orange */}
               <div className="p-2 bg-orange-500 rounded-xl shadow-lg shadow-orange-500/20">
-                <ClipboardList className="w-5 h-5 text-white" />
+                {isEditing ? <Edit3 className="w-5 h-5 text-white" /> : <ClipboardList className="w-5 h-5 text-white" />}
               </div>
-              <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tighter">Submit Request</h3>
+              <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tighter">
+                {isEditing ? "Edit Request" : "Submit Request"}
+              </h3>
             </div>
-            <p className="text-[10px] text-zinc-400 uppercase font-black tracking-[0.2em] ml-1">Spending Requirement</p>
+            <p className="text-[10px] text-zinc-400 uppercase font-black tracking-[0.2em] ml-1">
+              {isEditing ? "Modify existing data" : "Spending Requirement"}
+            </p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-400">
             <X className="w-5 h-5" />
@@ -84,7 +110,7 @@ export function AddPlanModal({ isOpen, onClose, categories = [], onSuccess }) {
                 required
                 autoFocus
                 className="w-full px-5 py-4 rounded-2xl border border-zinc-200 bg-zinc-50 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all text-zinc-900 placeholder:text-zinc-400 font-medium"
-                placeholder="Your Request"
+                placeholder="What is this for?"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
@@ -136,15 +162,10 @@ export function AddPlanModal({ isOpen, onClose, categories = [], onSuccess }) {
               >
                 <option value="">Select Category</option>
                 {categories.map((cat) => (
-                  <option key={cat._id} value={cat._id} className="text-zinc-900">{cat.name}</option>
+                  <option key={cat._id} value={cat._id}>{cat.name}</option>
                 ))}
               </select>
             </div>
-            {categories.length === 0 && (
-              <p className="text-[9px] font-bold text-red-500 uppercase flex items-center gap-1 mt-1">
-                <AlertCircle className="w-3 h-3" /> No categories found
-              </p>
-            )}
           </div>
 
           {/* Notes */}
@@ -162,12 +183,13 @@ export function AddPlanModal({ isOpen, onClose, categories = [], onSuccess }) {
              </div>
           </div>
 
+          {/* Button always uses the orange theme */}
           <button
             type="submit"
             disabled={loading || categories.length === 0}
             className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-zinc-200 text-white font-black py-5 rounded-[1.5rem] shadow-xl shadow-orange-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 mt-4 uppercase text-xs tracking-[0.2em]"
           >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Send Request"}
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isEditing ? "Update Request" : "Send Request")}
           </button>
         </form>
       </div>
