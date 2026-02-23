@@ -13,7 +13,12 @@ const PlanSchema = new mongoose.Schema({
   },
   amount: { 
     type: Number, 
-    required: true 
+    required: true // This remains the ORIGINAL amount requested
+  },
+  // NEW: The actual amount authorized by the manager
+  approvedAmount: { 
+    type: Number,
+    default: 0 
   },
   category: { 
     type: mongoose.Schema.Types.ObjectId, 
@@ -36,8 +41,17 @@ const PlanSchema = new mongoose.Schema({
     ref: "User", 
     required: true 
   },
+  // NEW: Tracks which manager handled the approval/rejection
+  reviewedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  },
   notes: { 
     type: String 
+  },
+  // NEW: Manager's justification for partial approval or rejection
+  managerComment: {
+    type: String
   }
 }, { 
   timestamps: true 

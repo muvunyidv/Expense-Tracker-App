@@ -7,17 +7,16 @@ const authMiddleware = require("../middleware/auth");
 // GET plans (Filtered by Silo)
 router.get("/", authMiddleware, async (req, res) => {
   try {
-    let query = { tenantId: req.user.tenantId }; // Basic Silo Lock
+    let query = { tenantId: req.user.tenantId };
 
-    // If STAFF, further restrict to only their OWN items within the silo
     if (req.user.role !== "manager") {
       query.userId = req.user.id;
     }
-    // If MANAGER, query remains { tenantId: req.user.tenantId }, seeing everyone in the group
 
     const plans = await Plan.find(query)
       .populate("userId", "username")
       .populate("category", "name")
+      .populate("reviewedBy", "username") // Added to see who reviewed it
       .sort({ updatedAt: -1 });
       
     res.json(plans);
@@ -27,7 +26,7 @@ router.get("/", authMiddleware, async (req, res) => {
   }
 });
 
-// POST a new plan
+// POST a new plan (No changes needed here, approvedAmount defaults to 0)
 router.post("/", authMiddleware, async (req, res) => {
   try {
     const { description, amount, category, priority, notes } = req.body;
@@ -37,7 +36,7 @@ router.post("/", authMiddleware, async (req, res) => {
     }
 
     const newPlan = new Plan({
-      tenantId: req.user.tenantId, // Tag with the user's specific group ID
+      tenantId: req.user.tenantId,
       description,
       amount,
       category, 
@@ -60,50 +59,58 @@ router.post("/", authMiddleware, async (req, res) => {
   }
 });
 
-// PATCH update plan status (Manager Only)
+// PATCH update plan status & amount (Manager Only)
 router.patch("/:id/status", authMiddleware, async (req, res) => {
   try {
-    // 1. Role Security Check
     if (req.user.role !== "manager") {
       return res.status(403).json({ error: "Access denied. Managers only." });
     }
 
-    const { status } = req.body;
+    // Capture the new fields from the manager's input
+    const { status, approvedAmount, managerComment } = req.body;
     const planId = req.params.id;
     
-    // 2. Find the Plan and Ensure it belongs to the Manager's Silo
     const planToUpdate = await Plan.findOne({ _id: planId, tenantId: req.user.tenantId });
       
     if (!planToUpdate) {
       return res.status(404).json({ error: "Plan not found in your workspace" });
     }
 
-    // 3. Logic: If approved, convert to an Expense
+    // LOGIC: If approved, convert to an Expense using the APPROVED amount
     if (status === "approved" && planToUpdate.status !== "approved") {
+      // Use the provided approvedAmount, or fallback to full amount if not provided
+      const finalAmount = approvedAmount !== undefined ? approvedAmount : planToUpdate.amount;
+
       const newExpense = new Expense({
-        tenantId: planToUpdate.tenantId, // CRITICAL: Expense stays in the same Silo
-        userId: planToUpdate.userId,     // Expense belongs to the original requester
+        tenantId: planToUpdate.tenantId,
+        userId: planToUpdate.userId,    
         categoryId: planToUpdate.category, 
-        amount: planToUpdate.amount,
-        description: `[Approved] ${planToUpdate.description}`,
-        notes: planToUpdate.notes || `Approved by ${req.user.username}`,
+        amount: finalAmount, // CRITICAL: This is the updated amount
+        description: `[Req-Approved] ${planToUpdate.description}`,
+        notes: managerComment || `Approved by ${req.user.username}`,
         date: new Date()
       });
 
       await newExpense.save();
     }
 
-    // 4. Update the Plan status
+    // Update the Plan with the decision details
     const updatedPlan = await Plan.findByIdAndUpdate(
       planId,
-      { status },
+      { 
+        status, 
+        approvedAmount: status === "approved" ? (approvedAmount || planToUpdate.amount) : 0,
+        managerComment,
+        reviewedBy: req.user.id // Track the manager
+      },
       { new: true }
     )
     .populate("userId", "username")
-    .populate("category", "name");
+    .populate("category", "name")
+    .populate("reviewedBy", "username");
 
     res.json({ 
-      message: status === "approved" ? "Plan approved and added to expenses" : `Plan marked as ${status}`, 
+      message: status === "approved" ? "Request authorized and logged as expense" : `Request ${status}`, 
       plan: updatedPlan 
     });
 

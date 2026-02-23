@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { X, ClipboardList, AlertCircle, Loader2 } from "lucide-react";
+import { X, ClipboardList, AlertCircle, Loader2, Banknote, Tag, MessageSquare } from "lucide-react";
 import API from "../api";
 
 export function AddPlanModal({ isOpen, onClose, categories = [], onSuccess }) {
   const [formData, setFormData] = useState({
     description: "",
     amount: "",
-    category: "", // This will now store the category ID
+    category: "", 
     priority: "normal",
     notes: ""
   });
@@ -17,7 +17,7 @@ export function AddPlanModal({ isOpen, onClose, categories = [], onSuccess }) {
       setFormData({
         description: "",
         amount: "",
-        category: "",
+        category: "", 
         priority: "normal",
         notes: ""
       });
@@ -38,10 +38,10 @@ export function AddPlanModal({ isOpen, onClose, categories = [], onSuccess }) {
       const submissionData = {
         ...formData,
         amount: Number(formData.amount),
-        // Find the category name to store alongside the ID if your Plan model needs it,
-        // otherwise, the backend will use the ID to map to the Expense model.
-        categoryName: categories.find(c => c._id === formData.category)?.name,
-        status: "pending"
+        // Ensuring status is lowercase to match our list filters
+        status: "pending",
+        // Default approvedAmount to requested amount for easier manager workflow
+        approvedAmount: Number(formData.amount) 
       };
 
       await API.post("/plans", submissionData);
@@ -56,56 +56,63 @@ export function AddPlanModal({ isOpen, onClose, categories = [], onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800/50 w-full max-w-md rounded-[32px] shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white border border-zinc-200 w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center bg-orange-50/30 dark:bg-orange-500/5">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-500 rounded-xl">
-              <ClipboardList className="w-5 h-5 text-white" />
+        <div className="p-8 pb-4 flex justify-between items-start">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-orange-500 rounded-xl shadow-lg shadow-orange-500/20">
+                <ClipboardList className="w-5 h-5 text-white" />
+              </div>
+              <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tighter">Submit Request</h3>
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-zinc-900 dark:text-white leading-none">New Requirement</h3>
-              <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1.5 opacity-70">Household & Business</p>
-            </div>
+            <p className="text-[10px] text-zinc-400 uppercase font-black tracking-[0.2em] ml-1">Spending Requirement</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors text-zinc-400">
+          <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-400">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Item Description */}
-          <div>
-            <label className="text-[10px] font-black mb-2 block uppercase text-zinc-500 tracking-wider">Item Description</label>
-            <input
-              required
-              autoFocus
-              className="w-full px-4 py-3.5 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all dark:text-white placeholder:text-zinc-400"
-              placeholder="e.g. 5kg Sugar or Toilet Paper"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            />
+        <form onSubmit={handleSubmit} className="p-8 pt-4 space-y-6">
+          {/* Description */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Item / Objective</label>
+            <div className="relative">
+              <input
+                required
+                autoFocus
+                className="w-full px-5 py-4 rounded-2xl border border-zinc-200 bg-zinc-50 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all text-zinc-900 placeholder:text-zinc-400 font-medium"
+                placeholder="Your Request"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-[10px] font-black mb-2 block uppercase text-zinc-500 tracking-wider">Est. Cost (Rwf)</label>
-              <input
-                type="number"
-                required
-                className="w-full px-4 py-3.5 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all dark:text-white"
-                placeholder="0"
-                value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-              />
+            {/* Amount */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1 text-nowrap">Est. Cost (Rwf)</label>
+              <div className="relative">
+                <Banknote className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                <input
+                  type="number"
+                  required
+                  className="w-full pl-11 pr-4 py-4 rounded-2xl border border-zinc-200 bg-zinc-50 focus:border-orange-500/50 outline-none transition-all text-zinc-900 font-bold"
+                  placeholder="0"
+                  value={formData.amount}
+                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                />
+              </div>
             </div>
             
-            <div>
-              <label className="text-[10px] font-black mb-2 block uppercase text-zinc-500 tracking-wider">Priority</label>
+            {/* Priority */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Priority</label>
               <select
-                className="w-full px-4 py-3.5 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all dark:text-white "
+                className="w-full px-4 py-4 rounded-2xl border border-zinc-200 bg-zinc-50 focus:border-orange-500/50 outline-none transition-all text-zinc-900 font-bold appearance-none cursor-pointer"
                 value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
               >
@@ -116,41 +123,49 @@ export function AddPlanModal({ isOpen, onClose, categories = [], onSuccess }) {
             </div>
           </div>
 
-          {/* Category Dropdown - Now using ID as Value */}
-          <div>
-            <label className="text-[10px] font-black mb-2 block uppercase text-zinc-500 tracking-wider">Category</label>
+          {/* Category */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Budget Category</label>
             <div className="relative">
+              <Tag className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
               <select
                 required
-                className="w-full px-4 py-3.5 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all dark:text-white "
+                className="w-full pl-11 pr-4 py-4 rounded-2xl border border-zinc-200 bg-zinc-50 focus:border-orange-500/50 outline-none transition-all text-zinc-900 font-bold appearance-none cursor-pointer"
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               >
-                <option value="" className="text-zinc-900 dark:text-white">
-                   {categories.length > 0 ? "Select Category" : "--- No Categories Found ---"}
-                </option>
+                <option value="">Select Category</option>
                 {categories.map((cat) => (
-                  <option key={cat._id} value={cat._id} className="text-zinc-900 dark:text-white bg-white dark:bg-zinc-900">
-                    {cat.name}
-                  </option>
+                  <option key={cat._id} value={cat._id} className="text-zinc-900">{cat.name}</option>
                 ))}
               </select>
             </div>
-            
             {categories.length === 0 && (
-              <div className="mt-3 p-3 bg-red-50 dark:bg-red-500/5 border border-red-100 dark:border-red-500/10 rounded-2xl flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-red-500" />
-                <p className="text-[10px] font-bold text-red-600/80 dark:text-red-400 uppercase tracking-tight">
-                  Error: API failed to load categories.
-                </p>
-              </div>
+              <p className="text-[9px] font-bold text-red-500 uppercase flex items-center gap-1 mt-1">
+                <AlertCircle className="w-3 h-3" /> No categories found
+              </p>
             )}
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-2">
+             <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Supporting Notes</label>
+             <div className="relative">
+                <MessageSquare className="absolute left-4 top-4 w-4 h-4 text-zinc-400" />
+                <textarea 
+                  className="w-full pl-11 pr-4 py-4 rounded-2xl border border-zinc-200 bg-zinc-50 focus:border-orange-500/50 outline-none transition-all text-zinc-900 text-sm"
+                  placeholder="Explain why this is needed..."
+                  rows="2"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                />
+             </div>
           </div>
 
           <button
             type="submit"
             disabled={loading || categories.length === 0}
-            className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-zinc-200 dark:disabled:bg-zinc-800 text-white font-black py-4 rounded-2xl shadow-lg shadow-orange-500/25 transition-all flex items-center justify-center gap-2 active:scale-[0.98] mt-2"
+            className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-zinc-200 text-white font-black py-5 rounded-[1.5rem] shadow-xl shadow-orange-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 mt-4 uppercase text-xs tracking-[0.2em]"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Send Request"}
           </button>

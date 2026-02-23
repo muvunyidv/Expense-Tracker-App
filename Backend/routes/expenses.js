@@ -10,6 +10,7 @@ router.use(authMiddleware);
 
 /* ================================
    Get expense summary (by category)
+   Reflects total approved spending
 ================================ */
 router.get('/summary/all', async (req, res) => {
   try {
@@ -63,7 +64,7 @@ router.get('/', async (req, res) => {
       .limit(Math.min(parseInt(limit), 200))
       .skip(parseInt(offset))
       .populate('categoryId', 'name')
-      .populate('userId', 'username'); // See who spent the money
+      .populate('userId', 'username'); 
 
     res.json(expenses);
   } catch (error) {
@@ -72,7 +73,7 @@ router.get('/', async (req, res) => {
 });
 
 /* ================================
-   Create expense
+   Create manual expense
 ================================ */
 router.post('/', async (req, res) => {
   try {
@@ -93,7 +94,7 @@ router.post('/', async (req, res) => {
     }
 
     const expense = new Expense({
-      tenantId: req.user.tenantId, // Link to the silo
+      tenantId: req.user.tenantId, 
       userId: req.user.id,
       categoryId,
       amount,
@@ -116,7 +117,6 @@ router.post('/', async (req, res) => {
 ================================ */
 router.get('/:id', async (req, res) => {
   try {
-    // Ensure the expense belongs to the user's tenant
     const expense = await Expense.findOne({
       _id: req.params.id,
       tenantId: req.user.tenantId
@@ -138,7 +138,6 @@ router.put('/:id', async (req, res) => {
     const { categoryId, amount, description, notes, date } = req.body;
 
     // Security: Only allow updating if it's in the same tenant
-    // Optionally: restrict so Staff can only update their OWN, but Manager can update ANY in tenant
     const updateQuery = req.user.role === 'manager'
       ? { _id: req.params.id, tenantId: req.user.tenantId }
       : { _id: req.params.id, userId: req.user.id, tenantId: req.user.tenantId };
