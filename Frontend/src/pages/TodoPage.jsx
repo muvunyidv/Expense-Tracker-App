@@ -69,7 +69,7 @@ export default function TodoPage() {
           className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-6 rounded-[2rem] border border-zinc-200 shadow-xl shadow-zinc-200/50"
         >
           <div className="md:col-span-1">
-            <label className="text-[10px] font-black uppercase ml-1 mb-1 block text-zinc-500">Objective</label>
+            <label className="text-[10px] font-black uppercase ml-1 mb-1 block text-zinc-500">Task Name</label>
             <input 
               className="w-full p-3 rounded-xl border border-zinc-200 bg-zinc-50 text-sm text-zinc-900 placeholder:text-zinc-400 focus:ring-2 focus:ring-orange-500 focus:bg-white outline-none transition-all" 
               placeholder="What needs to be done?"
