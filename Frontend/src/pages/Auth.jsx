@@ -122,7 +122,7 @@ function Auth({ onLogin }) {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-[10px] font-normal uppercase text-gray-400 ml-1">Username</label>
-                      <input name="username" type="text" value={formData.username} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500 transition-all font-normal" placeholder="John" />
+                      <input name="username" type="text" value={formData.username} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black outline-none focus:ring-2 focus:ring-orange-500 transition-all font-normal" placeholder="Username" />
                     </div>
                     <div>
                       <label className="text-[10px] font-normal uppercase text-gray-400 ml-1">Phone</label>
@@ -181,13 +181,13 @@ function Auth({ onLogin }) {
 
               <div>
                 <label className="text-[10px] font-normal uppercase text-gray-400 ml-1">Password</label>
-                <input name="password" type="password" placeholder="••••••••" value={formData.password} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none transition-all font-normal" />
+                <input name="password" type="password" placeholder="********  " value={formData.password} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none transition-all font-normal" />
               </div>
 
               {isSignup && (
                 <div>
                   <label className="text-[10px] font-normal uppercase text-gray-400 ml-1">Confirm Password</label>
-                  <input name="confirmPassword" type="password" placeholder="••••••••" value={formData.confirmPassword} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none transition-all font-normal" />
+                  <input name="confirmPassword" type="password" placeholder="********  " value={formData.confirmPassword} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-black focus:ring-2 focus:ring-orange-500 outline-none transition-all font-normal" />
                 </div>
               )}
 
