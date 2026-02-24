@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Coffee, Home, ShoppingBag, Car, Utensils, Smartphone, Trash2, Loader2, Pencil, User } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
 import { DeleteConfirmModal } from "./DeleteConfirmModal";
 import API from "../api";
 

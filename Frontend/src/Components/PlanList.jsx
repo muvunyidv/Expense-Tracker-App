@@ -21,6 +21,7 @@ import {
   CardTitle,
 } from "../Components/ui/card";
 import { AddPlanModal } from "./AddPlanModal";
+import ExpenseViewModal from "../Components/ExpenseViewModal"; 
 import API from "../api";
 
 export function PlanList() {
@@ -30,6 +31,9 @@ export function PlanList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userData, setUserData] = useState({ role: "staff", id: null });
   const [currentFilter, setCurrentFilter] = useState("pending");
+
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   const [decisionMode, setDecisionMode] = useState(null); 
   const [decisionData, setDecisionData] = useState({ amount: 0, comment: "" });
@@ -54,9 +58,6 @@ export function PlanList() {
         API.get("/plans"),
         API.get("/categories"),
       ]);
-
-      console.log("DEBUG: Raw API Response for Plans:", plansRes.data);
-
       setPlans(plansRes.data || []);
       setCategories(catsRes.data || []);
     } catch (error) {
@@ -76,18 +77,6 @@ export function PlanList() {
 
       await API.patch(`/plans/${id}/status`, payload);
 
-      setPlans((prev) =>
-        prev.map((p) =>
-          p._id === id
-            ? {
-                ...p,
-                status: newStatus,
-                approvedAmount: payload.approvedAmount,
-              }
-            : p
-        )
-      );
-
       if (newStatus === "approved") {
         window.dispatchEvent(new Event("expensesUpdated"));
       }
@@ -101,7 +90,6 @@ export function PlanList() {
   };
 
   const getStatusUI = (status) => {
-    // Normalize status for comparisons
     const s = status?.toLowerCase().trim();
     switch (s) {
       case "approved":
@@ -125,13 +113,13 @@ export function PlanList() {
     }
   };
 
-  // FIX: Case-insensitive filtering
   const filteredPlans = plans.filter(
     (p) => p.status?.toLowerCase().trim() === currentFilter.toLowerCase().trim()
   );
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-foreground uppercase">
@@ -151,6 +139,7 @@ export function PlanList() {
         </button>
       </div>
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
           { id: "pending", label: "Pending", icon: Clock, color: "amber" },
@@ -159,10 +148,7 @@ export function PlanList() {
         ].map((card) => {
           const Icon = card.icon;
           const isActive = currentFilter === card.id;
-          // FIX: Counter also needs case-insensitive logic
-          const count = plans.filter(
-            (p) => p.status?.toLowerCase().trim() === card.id
-          ).length;
+          const count = plans.filter((p) => p.status?.toLowerCase().trim() === card.id).length;
 
           return (
             <button
@@ -170,31 +156,24 @@ export function PlanList() {
               onClick={() => setCurrentFilter(card.id)}
               className={`p-4 border rounded-2xl flex justify-between items-center transition-all text-left ${
                 isActive
-                  ? `bg-${card.color}-500/10 border-${card.color}-500 shadow-lg`
-                  : "bg-muted/50 border-transparent"
+                  ? `bg-orange-500/10 border-orange-500 shadow-md`
+                  : "bg-muted/50 border-transparent hover:bg-muted"
               }`}
             >
               <div>
-                <span
-                  className={`text-[10px] font-bold uppercase tracking-wider ${
-                    isActive ? `text-${card.color}-600` : "text-muted-foreground"
-                  }`}
-                >
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${isActive ? `text-orange-600` : "text-muted-foreground"}`}>
                   {card.label}
                 </span>
                 <div className="text-2xl font-black text-foreground">{count}</div>
               </div>
-              <Icon
-                className={`w-8 h-8 ${
-                  isActive ? `text-${card.color}-500` : "text-muted-foreground/30"
-                }`}
-              />
+              <Icon className={`w-8 h-8 ${isActive ? `text-orange-500` : "text-muted-foreground/30"}`} />
             </button>
           );
         })}
       </div>
 
-      <Card className="border-gray-300/60 dark:border-zinc-700/60 shadow-xl overflow-hidden">
+      {/* Main List */}
+      <Card className="border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden rounded-[2rem]">
         <CardHeader className="border-b border-border/50 bg-muted/20">
           <CardTitle className="text-lg flex items-center gap-2">
             {currentFilter === "pending" ? (
@@ -223,18 +202,34 @@ export function PlanList() {
                 const statusNormalized = plan.status?.toLowerCase().trim();
 
                 return (
-                  <div
-                    key={plan._id}
-                    className="flex flex-col p-5 hover:bg-muted/30 transition-colors gap-4"
+                  <div 
+                    key={plan._id} 
+                    onClick={() => {
+                        if (!isEditing) {
+                            const categoryName = typeof plan.category === 'object' 
+                                ? plan.category?.name 
+                                : (plan.categoryId?.name || plan.category || "General");
+
+                            setSelectedPlan({
+                                ...plan,
+                                task: plan.description, 
+                                cost: plan.status === 'approved' ? plan.approvedAmount : plan.amount,      
+                                category: categoryName,
+                                notes: plan.managerComment || plan.notes || "No additional information provided."
+                            });
+                            setIsViewModalOpen(true);
+                        }
+                    }}
+                    className="flex flex-col p-5 hover:bg-orange-50/30 dark:hover:bg-zinc-800/40 transition-all cursor-pointer group"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-xl shrink-0 ${ui.color}`}>
+                        <div className={`p-3 rounded-xl shrink-0 transition-transform group-hover:scale-110 ${ui.color}`}>
                           {ui.icon}
                         </div>
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-foreground">
+                            <span className="font-bold text-foreground group-hover:text-orange-600 transition-colors">
                               {plan.description}
                             </span>
                             {plan.priority === "urgent" && (
@@ -245,7 +240,7 @@ export function PlanList() {
                           </div>
                           <div className="text-[11px] text-muted-foreground flex items-center gap-2 mt-0.5 uppercase font-medium">
                             <span className="text-orange-500 font-bold">
-                              {plan.category?.name}
+                                {plan.category?.name || plan.category || "General"}
                             </span>
                             <span className="opacity-30">•</span>
                             <span className="flex items-center gap-1">
@@ -257,131 +252,82 @@ export function PlanList() {
 
                       <div className="flex items-center justify-between sm:justify-end gap-6">
                         <div className="text-left sm:text-right">
-                          <div className="text-[10px] text-muted-foreground uppercase font-bold">
-                            Requested
-                          </div>
-                          <div
-                            className={`font-black text-lg ${
-                              statusNormalized === "approved" &&
-                              plan.approvedAmount < plan.amount
-                                ? "line-through opacity-50 text-sm"
-                                : "text-foreground"
-                            }`}
-                          >
+                          <div className="text-[10px] text-muted-foreground uppercase font-bold">Requested</div>
+                          <div className={`font-black text-lg ${statusNormalized === "approved" && plan.approvedAmount < plan.amount ? "line-through opacity-50 text-sm" : "text-foreground"}`}>
                             {plan.amount?.toLocaleString()} Rwf
                           </div>
-                          {statusNormalized === "approved" &&
-                            plan.approvedAmount < plan.amount && (
-                              <div className="font-black text-green-600 text-lg">
-                                {plan.approvedAmount?.toLocaleString()} Rwf
-                              </div>
-                            )}
-                        </div>
-
-                        {userData.role === "manager" &&
-                          statusNormalized === "pending" &&
-                          !isEditing && (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => {
-                                  setDecisionMode(plan._id);
-                                  setDecisionData({
-                                    amount: plan.amount,
-                                    comment: "",
-                                  });
-                                }}
-                                className="p-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 shadow-lg shadow-green-600/20 active:scale-90 transition-all"
-                              >
-                                <Check className="w-5 h-5" />
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleStatusUpdate(plan._id, "rejected")
-                                }
-                                className="p-2.5 bg-zinc-200 dark:bg-zinc-800 text-foreground rounded-xl hover:bg-red-500 hover:text-white active:scale-90 transition-all"
-                              >
-                                <X className="w-5 h-5" />
-                              </button>
+                          {statusNormalized === "approved" && plan.approvedAmount < plan.amount && (
+                            <div className="font-black text-green-600 text-lg">
+                              {plan.approvedAmount?.toLocaleString()} Rwf
                             </div>
                           )}
+                        </div>
+
+                        {userData.role === "manager" && statusNormalized === "pending" && !isEditing && (
+                          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => {
+                                setDecisionMode(plan._id);
+                                setDecisionData({ amount: plan.amount, comment: "" });
+                              }}
+                              className="p-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 shadow-lg shadow-green-600/20 active:scale-90 transition-all"
+                            >
+                              <Check className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => handleStatusUpdate(plan._id, "rejected")}
+                              className="p-2.5 bg-zinc-200 dark:bg-zinc-800 text-foreground rounded-xl hover:bg-red-500 hover:text-white active:scale-90 transition-all"
+                            >
+                              <X className="w-5 h-5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
 
+                    {plan.managerComment && (
+                        <div className="mt-3 ml-14 p-2 px-3 bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-lg flex items-start gap-2 max-w-2xl">
+                            <MessageSquare className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
+                            <p className="text-[11px] text-blue-700 dark:text-blue-400 font-medium italic">
+                                "{plan.managerComment}" — Reviewed by Manager
+                            </p>
+                        </div>
+                    )}
+
                     {isEditing && (
-                      <div className="mt-4 p-8 bg-white rounded-[2.5rem] border border-zinc-200 shadow-xl animate-in slide-in-from-top-4 duration-300">
+                      <div className="mt-4 p-8 bg-white dark:bg-white rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-2xl animate-in slide-in-from-top-4 duration-300 relative z-10" onClick={(e) => e.stopPropagation()}>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-zinc-500 mb-2 block ml-1 tracking-widest">
-                              Approve Amount (Rwf)
-                            </label>
+                            <label className="text-[10px] font-black uppercase text-zinc-500 mb-2 block ml-1 tracking-widest">Approve Amount (Rwf)</label>
                             <div className="relative">
                               <Edit3 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                               <input
                                 type="number"
-                                value={
-                                  decisionData.amount === 0
-                                    ? ""
-                                    : decisionData.amount
-                                }
+                                value={decisionData.amount === 0 ? "" : decisionData.amount}
                                 placeholder="Enter approved amount..."
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setDecisionData({
-                                    ...decisionData,
-                                    amount: val === "" ? 0 : Number(val),
-                                  });
-                                }}
-                                className="w-full pl-12 pr-4 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl font-bold text-black focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all"
+                                onChange={(e) => setDecisionData({ ...decisionData, amount: e.target.value === "" ? 0 : Number(e.target.value) })}
+                                className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-white border border-zinc-200 dark:border-zinc-800 rounded-2xl font-bold text-zinc-900 dark:text-black focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all"
                               />
                             </div>
                           </div>
-
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-zinc-500 mb-2 block ml-1 tracking-widest">
-                              Manager Comment
-                            </label>
+                            <label className="text-[10px] font-black uppercase text-zinc-500 mb-2 block ml-1 tracking-widest">Manager Comment</label>
                             <div className="relative">
                               <MessageSquare className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                               <input
                                 type="text"
                                 placeholder="Add a reason for this amount..."
                                 value={decisionData.comment}
-                                onChange={(e) =>
-                                  setDecisionData({
-                                    ...decisionData,
-                                    comment: e.target.value,
-                                  })
-                                }
-                                className="w-full pl-12 pr-4 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-black font-medium focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all placeholder:text-zinc-400"
+                                onChange={(e) => setDecisionData({ ...decisionData, comment: e.target.value })}
+                                className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-white border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-900 dark:text-black font-medium focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all placeholder:text-zinc-400"
                               />
                             </div>
                           </div>
                         </div>
-
-                        <div className="flex justify-end items-center gap-6 mt-8 pt-6 border-t border-zinc-100">
-                          <button
-                            onClick={() => setDecisionMode(null)}
-                            className="px-4 py-2 text-[10px] font-black uppercase text-zinc-400 hover:text-zinc-900 tracking-widest transition-colors"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={() =>
-                              handleStatusUpdate(plan._id, "approved")
-                            }
-                            className="px-10 py-4 bg-green-500 hover:bg-green-600 text-white rounded-[1.2rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-green-500/20 active:scale-95 transition-all"
-                          >
-                            Confirm Approval
-                          </button>
+                        <div className="flex justify-end items-center gap-6 mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800">
+                          <button onClick={() => setDecisionMode(null)} className="px-4 py-2 text-[10px] font-black uppercase text-zinc-400 hover:text-red-500 tracking-widest transition-colors">Cancel</button>
+                          <button onClick={() => handleStatusUpdate(plan._id, "approved")} className="px-10 py-4 bg-green-500 hover:bg-green-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-green-500/20 active:scale-95 transition-all">Confirm Approval</button>
                         </div>
-                      </div>
-                    )}
-
-                    {plan.managerComment && (
-                      <div className="text-[11px] bg-blue-500/5 text-blue-600 p-2 rounded-lg border border-blue-100 flex items-start gap-2 italic">
-                        <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />"
-                        {plan.managerComment}" — Reviewed by{" "}
-                        {plan.reviewedBy?.username || "Manager"}
                       </div>
                     )}
                   </div>
@@ -391,6 +337,12 @@ export function PlanList() {
           )}
         </CardContent>
       </Card>
+
+      <ExpenseViewModal 
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+        data={selectedPlan}
+      />
 
       <AddPlanModal
         isOpen={isModalOpen}

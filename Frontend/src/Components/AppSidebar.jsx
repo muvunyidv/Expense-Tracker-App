@@ -10,7 +10,8 @@ import {
   UserCircle, 
   ShieldCheck, 
   User, 
-  ListTodo // New Icon for Todo
+  ListTodo,
+  Activity
 } from "lucide-react";
 import {
   Sidebar,
@@ -24,23 +25,30 @@ import {
   useSidebar, 
 } from "./ui/sidebar";
 
-// Updated menu items to include the new Todo logic
 const menuItems = [
   { title: "Summary", icon: LayoutDashboard, url: "#summary" },
   { title: "Categories", icon: Tags, url: "#categories" },
-  { title: "Requests", icon: ClipboardList, url: "#plans" }, // Old plan files now requests
-  { title: "Plans", icon: ListTodo, url: "#todos" },        // New Todo feature
+  { title: "Requests", icon: ClipboardList, url: "#plans" }, 
+  { title: "Plans", icon: ListTodo, url: "#todos" },         
 ];
 
-export function AppSidebar({ total = 0, user = {} }) {
+export function AppSidebar({ totals = { summary: 0, plans: 0, todos: { pipeline: 0, completed: 0 } }, user = {} }) {
   const [activeHash, setActiveHash] = useState(() => window.location.hash || "#summary");
   const [copied, setCopied] = useState(false);
   const { isMobile, setOpen } = useSidebar();
 
   useEffect(() => {
-    const onHashChange = () => setActiveHash(window.location.hash || "#summary");
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
+    const onRefresh = () => setActiveHash(window.location.hash || "#summary");
+    
+    // Listen for URL changes
+    window.addEventListener("hashchange", onRefresh);
+    // Listen for manual updates from the TodoPage data changes
+    window.addEventListener("plansUpdated", onRefresh);
+
+    return () => {
+      window.removeEventListener("hashchange", onRefresh);
+      window.removeEventListener("plansUpdated", onRefresh);
+    };
   }, []);
 
   const handleNavigation = () => {
@@ -57,6 +65,38 @@ export function AppSidebar({ total = 0, user = {} }) {
 
   const isManager = user?.role === "manager";
   const isPersonalUser = user?.role === "user";
+
+  const getActiveData = () => {
+    switch (activeHash) {
+      case "#todos":
+        return { 
+          label: "Active Pipeline", 
+          value: totals.todos?.pipeline || 0,
+          icon: <Activity className="w-4 h-4 text-white" />
+        };
+      case "#plans":
+        return { 
+          label: "Total Requested", 
+          value: totals.plans || 0,
+          icon: <ClipboardList className="w-4 h-4 text-white" />
+        };
+      case "#categories":
+        return { 
+          label: "Category Total", 
+          value: totals.summary || 0,
+          icon: <Tags className="w-4 h-4 text-white" />
+        };
+      case "#summary":
+      default:
+        return { 
+          label: isManager ? "Organization Total" : "Total Expenses", 
+          value: totals.summary || 0,
+          icon: <Wallet className="w-4 h-4 text-white" />
+        };
+    }
+  };
+
+  const { label, value, icon } = getActiveData();
 
   return (
     <Sidebar className="border-r border-zinc-200 bg-white">
@@ -80,7 +120,7 @@ export function AppSidebar({ total = 0, user = {} }) {
                   <div className="flex items-center gap-1">
                     <div className="w-1.5 h-1.5 rounded-full animate-pulse bg-orange-500" />
                     <p className="text-[10px] font-black uppercase tracking-widest text-orange-600">
-                      {isPersonalUser ? "Personal" : user?.role || "Staff"}
+                      {isPersonalUser ? "Personal Account" : user?.role || "Staff"}
                     </p>
                   </div>
                 </div>
@@ -122,9 +162,9 @@ export function AppSidebar({ total = 0, user = {} }) {
           </SidebarGroup>
 
           <div className="mt-auto p-4 space-y-4">
-            {/* RECRUIT STAFF */}
+            {/* RECRUIT STAFF - MANAGER ONLY */}
             {isManager && user?.inviteCode && (
-              <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-4 shadow-lg shadow-orange-100 animate-in slide-in-from-left duration-500">
+              <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-4 shadow-lg shadow-orange-100">
                 <div className="flex items-center gap-2 mb-3">
                   <Users className="w-3.5 h-3.5 text-orange-100" />
                   <span className="text-[10px] font-black text-orange-100 uppercase tracking-widest">Recruit Staff</span>
@@ -140,27 +180,26 @@ export function AppSidebar({ total = 0, user = {} }) {
                     <Copy className="w-4 h-4 text-orange-200 group-hover:text-white" />
                   )}
                 </button>
-                <p className="text-[9px] text-orange-200 font-bold mt-2 uppercase text-center tracking-tighter">Share code to sync group data</p>
               </div>
             )}
 
-            {/* TOTAL WIDGET */}
-            <div className="relative overflow-hidden rounded-2xl p-5 shadow-xl bg-orange-600 shadow-orange-500/30 active:scale-95 transition-all">
+            {/* TOTAL WIDGET - Dynamic based on Page */}
+            <div className="relative overflow-hidden rounded-2xl p-5 shadow-xl bg-orange-600 active:scale-95 transition-all">
               <div className="absolute -right-2 -top-2 h-16 w-16 rounded-full bg-white/10 blur-xl" />
               <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-1.5 rounded-lg bg-white/20">
-                    <Wallet className="w-4 h-4 text-white" />
+                    {icon}
                   </div>
-                  <span className="text-[10px] font-black text-white/90 uppercase tracking-widest">
-                    {isManager ? "Organization Total" : isPersonalUser ? "Total Spent" : "My Total Expenses"}
+                  <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                    {label}
                   </span>
                 </div>
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-2xl font-black text-white tracking-tight">
-                    {total.toLocaleString()}
+                    {Number(value).toLocaleString()}
                   </span>
-                  <span className="text-[10px] font-bold text-white/50 uppercase">Rwf</span>
+                  <span className="text-[10px] font-bold text-white/60 uppercase">Rwf</span>
                 </div>
               </div>
             </div>
@@ -179,13 +218,13 @@ export function Footer() {
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
         <div className="flex flex-col items-center md:items-start gap-1.5">
           <div className="flex items-center gap-2">
-             <div className="h-2.5 w-2.5 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50" />
+             <div className="h-2.5 w-2.5 rounded-full bg-orange-500" />
              <p className="text-sm font-black text-zinc-900 uppercase tracking-tighter">
-               EXPENSE<span className="text-orange-500">.</span>TRK
+                EXPENSE<span className="text-orange-500">.</span>TRK
              </p>
           </div>
           <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-            © {currentYear} • { "PERSONAL & GROUP FINANCIAL MANAGEMENT" }
+            © {currentYear} • PROFESSIONAL FINANCIAL ANALYTICS
           </p>
         </div>
 

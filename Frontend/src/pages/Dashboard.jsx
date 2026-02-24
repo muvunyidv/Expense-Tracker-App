@@ -1,12 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { ExpenseList } from "../Components/ExpenseList";
 import { ThemeToggle } from "../Components/ThemeToggle";
 import { AppSidebar, Footer } from "../Components/AppSidebar";
 import { AddExpenseForm } from "../Components/AddExpenseForm";
-import { ExpenseViewModal } from "../Components/ExpenseViewModal";
+import ExpenseViewModal from "../Components/ExpenseViewModal"; 
 import { Categories } from "./Categories";
 import { PlanList } from "../Components/PlanList"; 
-// Ensure you have created this file as TodoPage.jsx
 import TodoPage from "./TodoPage"; 
 import API from "../api";
 import {
@@ -15,27 +14,50 @@ import {
   SidebarInset,
   useSidebar,
 } from "../Components/ui/sidebar";
-import { LogOut, PlusCircle, User, ArrowRight, Wallet, ShieldCheck, UserCircle } from "lucide-react";
+import { LogOut, PlusCircle, User, ArrowRight, Wallet, ShieldCheck, UserCircle, Activity, CheckCircle2 } from "lucide-react";
 
-// Sub-component for the main dashboard layout
 function DashboardContent({ 
-  onLogout, user, totalExpenses, searchQuery, setSearchQuery, 
+  user, totals, searchQuery, setSearchQuery, 
   categories, currentPage, title, description, handleOpenAddForm, 
-  handleEditClick, handleViewClick, fetchCategories, handleLogout, 
+  handleEditClick, handleViewClick, handleLogout, 
   menuRef, isUserMenuOpen, setIsUserMenuOpen, userInitial 
 }) {
   
   const { isMobile, openMobile } = useSidebar();
   const isPersonalUser = user?.role === "user";
 
+  const getMobileWidgetData = () => {
+    switch (currentPage) {
+      case "#todos": 
+        return { 
+          label: "Active Pipeline", 
+          val: totals.todos?.pipeline || 0, 
+          icon: <Activity className="w-5 h-5 text-white/80" /> 
+        };
+      case "#plans": 
+        return { 
+          label: "Total Requested", 
+          val: totals.plans || 0, 
+          icon: <ShieldCheck className="w-5 h-5 text-white/80" /> 
+        };
+      default: 
+        return { 
+          label: isPersonalUser ? "Total Spent" : "Team Total", 
+          val: totals.summary || 0, 
+          icon: <Wallet className="w-5 h-5 text-white/80" /> 
+        };
+    }
+  };
+  const mobileWidget = getMobileWidgetData();
+
   return (
-    <div className="flex min-h-screen w-full relative">
-      <AppSidebar total={totalExpenses} variant="inset" user={user} /> 
+    <div className="flex min-h-screen w-full relative bg-background">
+      <AppSidebar totals={totals} variant="inset" user={user} /> 
       
-      <SidebarInset>
-        <div className="flex-1 flex flex-col">
-          {/* Top Navigation Bar */}
-          <div className="sticky top-0 z-50 bg-background/95 backdrop-blur shadow-lg border-b/80 border-gray-100">
+      <SidebarInset className="overflow-hidden">
+        <div className="flex-1 flex flex-col h-full overflow-y-auto">
+          {/* Header Section */}
+          <div className="sticky top-0 z-50 bg-background/95 backdrop-blur shadow-sm border-b border-border/40">
             <div className="max-w-7xl mx-auto grid grid-cols-3 items-center px-4 md:px-6 py-3">
               <div className="flex items-center gap-2">
                 <span className="md:hidden"><SidebarTrigger /></span>
@@ -57,10 +79,10 @@ function DashboardContent({
 
               <div className="flex items-center gap-3 justify-self-end relative" ref={menuRef}>
                 {!isMobile && (
-                  <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border animate-in fade-in zoom-in-90 ${
+                  <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${
                     user?.role === "manager" 
-                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800" 
-                    : "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-800"
+                    ? "bg-blue-50 text-blue-600 border-blue-200" 
+                    : "bg-orange-50 text-orange-600 border-orange-200"
                   }`}>
                     {user?.role === "manager" ? <ShieldCheck className="w-3.5 h-3.5" /> : <UserCircle className="w-3.5 h-3.5" />}
                     <span className="text-[10px] font-black uppercase tracking-tight">
@@ -71,24 +93,24 @@ function DashboardContent({
 
                 <button 
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="h-9 w-9 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-sm shadow-md hover:scale-105 transition-transform active:scale-95 ring-2 ring-offset-2 ring-transparent hover:ring-orange-500/20"
+                  className="h-9 w-9 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-sm shadow-md hover:scale-105 transition-transform"
                 >
                   {userInitial}
                 </button>
 
                 {isUserMenuOpen && (
-                  <div className="absolute right-0 top-full mt-3 w-64 rounded-xl border border-border shadow-2xl p-2 animate-in fade-in zoom-in-95 duration-100 z-[999] bg-white dark:bg-[#1c1c1c]">
+                  <div className="absolute right-0 top-full mt-3 w-64 rounded-xl border border-border shadow-2xl p-2 z-[999] bg-white dark:bg-[#1c1c1c]">
                     <div className="px-4 py-3 border-b border-border/50 mb-1">
-                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-black uppercase tracking-widest">Account Type</p>
+                      <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">Account Type</p>
                       <p className="text-sm font-bold truncate mt-0.5 text-zinc-900 dark:text-white capitalize">{user?.username || 'User'}</p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate font-medium">{user?.email}</p>
+                      <p className="text-xs text-zinc-500 truncate font-medium">{user?.email}</p>
                     </div>
-                    <div className="flex items-center justify-between px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors cursor-default">
+                    <div className="flex items-center justify-between px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors cursor-pointer">
                       <span className="text-sm font-semibold text-zinc-900 dark:text-white">Appearance</span>
                       <ThemeToggle />
                     </div>
                     <div className="h-px bg-border/50 my-1" />
-                    <button onClick={handleLogout} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                    <button onClick={handleLogout} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg">
                       <LogOut className="w-4 h-4" /> Logout
                     </button>
                   </div>
@@ -100,8 +122,32 @@ function DashboardContent({
           <div className="flex-1 bg-background p-6">
             <div className="max-w-7xl mx-auto space-y-6">
               
+              {/* TOP WIDGETS */}
+              {currentPage === "#todos" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2 animate-in fade-in duration-500">
+                   <div className="p-4 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-between shadow-sm">
+                     <div>
+                       <p className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">Pipeline Commitment</p>
+                       <p className="text-2xl font-black text-zinc-900">{(totals.todos?.pipeline || 0).toLocaleString()} <span className="text-xs font-bold text-zinc-400">Rwf</span></p>
+                     </div>
+                     <div className="h-12 w-12 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                        <Activity className="w-6 h-6 text-orange-500" />
+                     </div>
+                   </div>
+                   <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-between shadow-sm">
+                     <div>
+                       <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Executed (Done)</p>
+                       <p className="text-2xl font-black text-emerald-700">{(totals.todos?.completed || 0).toLocaleString()} <span className="text-xs font-bold text-emerald-400">Rwf</span></p>
+                     </div>
+                     <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                        <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                     </div>
+                   </div>
+                </div>
+              )}
+
               {currentPage === "#categories" ? (
-                <Categories onCategoriesChange={fetchCategories} />
+                <Categories onCategoriesChange={() => window.dispatchEvent(new Event("categoriesUpdated"))} />
               ) : currentPage === "#plans" ? (
                 <PlanList /> 
               ) : currentPage === "#todos" ? (
@@ -134,7 +180,7 @@ function DashboardContent({
                   />
 
                   {categories.length === 0 && (
-                    <div className="text-center py-8 bg-muted/20 rounded-2xl border border-dashed border-border animate-in fade-in duration-700">
+                    <div className="text-center py-8 bg-muted/20 rounded-2xl border border-dashed border-border">
                       <p className="text-sm text-muted-foreground font-medium">
                         {isPersonalUser ? "Start by setting up your spending categories." : "You need to create categories for your team first."}{" "}
                         <a href="#categories" className="text-orange-500 font-black hover:underline inline-flex items-center gap-0.5">
@@ -147,21 +193,21 @@ function DashboardContent({
               )}
             </div>
           </div>
+          <Footer />
         </div>
-        <Footer />
       </SidebarInset>
 
-      {/* Floating Mobile Stats Card */}
+      {/* Floating Mobile Widget */}
       {isMobile && !openMobile && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
           <div className="flex items-center gap-3 px-6 py-3 bg-zinc-900/95 dark:bg-orange-600 text-white rounded-2xl shadow-2xl border border-white/10 backdrop-blur-md">
-            <Wallet className="w-5 h-5 text-white/80" />
+            {mobileWidget.icon}
             <div className="flex flex-col">
               <span className="text-[10px] font-bold uppercase tracking-wider opacity-70">
-                {isPersonalUser ? "Total Spent" : "Team Total"}
+                {mobileWidget.label}
               </span>
               <span className="text-base font-black tracking-tight">
-                {totalExpenses.toLocaleString()} <span className="text-[10px]">Rwf</span>
+                {mobileWidget.val.toLocaleString()} <span className="text-[10px]">Rwf</span>
               </span>
             </div>
           </div>
@@ -171,7 +217,6 @@ function DashboardContent({
   );
 }
 
-// Main Controller Component
 export default function Dashboard({ onLogout, user: initialUser }) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
@@ -182,13 +227,82 @@ export default function Dashboard({ onLogout, user: initialUser }) {
   const [currentPage, setCurrentPage] = useState(() => window.location.hash || "#summary");
   const [searchQuery, setSearchQuery] = useState("");
   const [categories, setCategories] = useState([]);
+  
   const [totalExpenses, setTotalExpenses] = useState(0); 
-  const menuRef = useRef(null);
+  const [totalRequested, setTotalRequested] = useState(0); 
+  const [totalPlans, setTotalPlans] = useState({ pipeline: 0, completed: 0 }); 
 
+  const menuRef = useRef(null);
   const isPersonalUser = user?.role === "user";
 
+  const fetchAllTotals = useCallback(async () => {
+    try {
+      const expRes = await API.get("/expenses");
+      setTotalExpenses(expRes.data.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0));
+
+      const planRes = await API.get("/plans");
+      const calculatedRequests = planRes.data.reduce((acc, curr) => {
+        const finalAmount = curr.approvedAmount !== undefined ? curr.approvedAmount : curr.amount;
+        return acc + (Number(finalAmount) || 0);
+      }, 0);
+      setTotalRequested(calculatedRequests);
+
+      const todoRes = await API.get("/todos");
+      const pipeline = todoRes.data
+        .filter(t => !t.completed && t.status !== 'completed')
+        .reduce((acc, curr) => acc + (Number(curr.estCost || curr.amount || curr.cost || 0)), 0);
+      
+      const completed = todoRes.data
+        .filter(t => t.completed || t.status === 'completed')
+        .reduce((acc, curr) => acc + (Number(curr.estCost || curr.amount || curr.cost || 0)), 0);
+
+      setTotalPlans({ pipeline, completed });
+    } catch (err) {
+      console.error("Error fetching totals:", err);
+    }
+  }, []);
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await API.get("/categories");
+      setCategories(res.data);
+    } catch (err) {}
+  }, []);
+
+  // Global Refresh Listener Effect
   useEffect(() => {
-    if (!user) { fetchUserData(); }
+    const handleRefresh = () => {
+      fetchAllTotals();
+      fetchCategories();
+    };
+
+    window.addEventListener("expensesUpdated", handleRefresh);
+    window.addEventListener("categoriesUpdated", fetchCategories);
+    window.addEventListener("plansUpdated", handleRefresh);
+    window.addEventListener("todosUpdated", handleRefresh); // Added for TodoPage support
+
+    return () => {
+      window.removeEventListener("expensesUpdated", handleRefresh);
+      window.removeEventListener("categoriesUpdated", fetchCategories);
+      window.removeEventListener("plansUpdated", handleRefresh);
+      window.removeEventListener("todosUpdated", handleRefresh);
+    };
+  }, [fetchAllTotals, fetchCategories]);
+
+  // Auth & Lifecycle Effect
+  useEffect(() => {
+    if (!user) {
+      const fetchUserData = async () => {
+        try {
+          const res = await API.get("/auth/me");
+          setUser(res.data);
+          localStorage.setItem("user", JSON.stringify(res.data));
+        } catch (err) {
+          if (err.response?.status === 401) onLogout();
+        }
+      };
+      fetchUserData();
+    }
 
     const onHashChange = () => {
       setCurrentPage(window.location.hash || "#summary");
@@ -196,8 +310,10 @@ export default function Dashboard({ onLogout, user: initialUser }) {
     };
 
     window.addEventListener("hashchange", onHashChange);
+    
+    // Initial data fetch
     fetchCategories();
-    fetchTotal();
+    fetchAllTotals(); 
 
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -206,39 +322,11 @@ export default function Dashboard({ onLogout, user: initialUser }) {
     };
     
     document.addEventListener("mousedown", handleClickOutside);
-    window.addEventListener("expensesUpdated", fetchTotal);
-
     return () => {
       window.removeEventListener("hashchange", onHashChange);
       document.removeEventListener("mousedown", handleClickOutside);
-      window.removeEventListener("expensesUpdated", fetchTotal);
     };
-  }, [user]);
-
-  const fetchUserData = async () => {
-    try {
-      const res = await API.get("/auth/me");
-      setUser(res.data);
-      localStorage.setItem("user", JSON.stringify(res.data));
-    } catch (err) {
-      if (err.response?.status === 401) onLogout();
-    }
-  };
-
-  const fetchTotal = async () => {
-    try {
-      const res = await API.get("/expenses");
-      const total = res.data.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-      setTotalExpenses(total);
-    } catch (err) {}
-  };
-
-  const fetchCategories = async () => {
-    try {
-      const res = await API.get("/categories");
-      setCategories(res.data);
-    } catch (err) {}
-  };
+  }, [user, onLogout, fetchAllTotals, fetchCategories]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -261,30 +349,18 @@ export default function Dashboard({ onLogout, user: initialUser }) {
     }
   };
 
-  // DYNAMIC PAGE CONTENT BASED ON ROLE
-  const { title, description } = (function getPageTitle() {
+  const pageInfo = (function getPageTitle() {
     switch (currentPage) {
       case "#categories":
-        return { 
-          title: "Categories", 
-          description: isPersonalUser ? "How you group your personal spending" : "Organize team spending habits" 
-        };
+        return { title: "Categories", description: isPersonalUser ? "How you group your spending" : "Organize team habits" };
       case "#plans":
-        // Updated to "Requests" per instructions
-        return { 
-          title: "Requests", 
-          description: isPersonalUser ? "Future spending goals" : "Submit and track budget approvals" 
-        };
+        return { title: "Approval Queue", description: "Authorize expenditures or adjust amounts" };
       case "#todos":
-        // New Title for the Todo feature
-        return { 
-          title: "Planned Strategy", 
-          description: "Organize tasks and project timelines" 
-        };
+        return { title: "Planned Tasks", description: "Timeline & Execution" };
       default:
         return { 
           title: isPersonalUser ? "My Spending" : "Management Dashboard", 
-          description: isPersonalUser ? "Track your personal finances here" : "Overview of team and approved spending" 
+          description: isPersonalUser ? "Track your personal finances" : "Overview of team and approved spending" 
         };
     }
   })();
@@ -294,9 +370,25 @@ export default function Dashboard({ onLogout, user: initialUser }) {
   return (
     <SidebarProvider>
       <DashboardContent 
-        {...{ onLogout, user, totalExpenses, searchQuery, setSearchQuery, categories, currentPage, title, description, userInitial, isUserMenuOpen, setIsUserMenuOpen, menuRef }}
+        {...{ 
+          user, 
+          totals: {
+            summary: totalExpenses,
+            plans: totalRequested,
+            todos: totalPlans
+          }, 
+          searchQuery, 
+          setSearchQuery, 
+          categories, 
+          currentPage, 
+          title: pageInfo.title, 
+          description: pageInfo.description, 
+          userInitial, 
+          isUserMenuOpen, 
+          setIsUserMenuOpen, 
+          menuRef 
+        }}
         handleLogout={handleLogout}
-        fetchCategories={fetchCategories}
         handleOpenAddForm={() => { setEditingExpense(null); setIsFormOpen(true); }}
         handleEditClick={(exp) => { setEditingExpense(exp); setIsFormOpen(true); }}
         handleViewClick={setViewingExpense}
@@ -313,7 +405,7 @@ export default function Dashboard({ onLogout, user: initialUser }) {
       <ExpenseViewModal
         isOpen={!!viewingExpense}
         onClose={() => setViewingExpense(null)}
-        expense={viewingExpense}
+        data={viewingExpense} 
       />
     </SidebarProvider>
   );

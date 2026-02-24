@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { CheckCircle2, Circle, Calendar, Plus, Trash2, Loader2, ListTodo, AlertCircle, Banknote, Lock, User } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
 import API from "../api";
+import ExpenseViewModal from "../Components/ExpenseViewModal";
 
 export default function TodoPage() {
   const [todos, setTodos] = useState([]);
@@ -9,7 +10,31 @@ export default function TodoPage() {
   const [formData, setFormData] = useState({ task: "", cost: "", startDate: "", endDate: "" });
   const [currentUserId, setCurrentUserId] = useState(null);
 
-  // 1. Get User ID from Token (More reliable than localStorage)
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTodo, setSelectedTodo] = useState(null);
+
+  // Helper to notify Dashboard (Sidebar & Top Widgets) to refresh
+  const refreshDashboard = useCallback(() => {
+    window.dispatchEvent(new Event("plansUpdated"));
+    // Also trigger expensesUpdated just in case your summary logic relies on it
+    window.dispatchEvent(new Event("expensesUpdated"));
+  }, []);
+
+  const fetchTodos = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await API.get("/todos");
+      // Sort: Pending first, then Completed
+      const sorted = res.data.sort((a, b) => (a.completed === b.completed ? 0 : a.completed ? 1 : -1));
+      setTodos(sorted);
+    } catch (err) {
+      console.error("Error fetching todos", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -17,27 +42,13 @@ export default function TodoPage() {
         const base64Url = token.split('.')[1];
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
         const payload = JSON.parse(window.atob(base64));
-        // Use the same key as your middleware (id)
         setCurrentUserId(payload.id); 
       } catch (e) {
         console.error("Token decoding failed", e);
       }
     }
     fetchTodos();
-  }, []);
-
-  const fetchTodos = async () => {
-    try {
-      setLoading(true);
-      const res = await API.get("/todos");
-      const sorted = res.data.sort((a, b) => (a.status === 'completed') - (b.status === 'completed'));
-      setTodos(sorted);
-    } catch (err) {
-      console.error("Error fetching todos", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [fetchTodos]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -47,20 +58,43 @@ export default function TodoPage() {
     }
 
     try {
-      const res = await API.post("/todos", formData);
-      setTodos([res.data, ...todos]);
+      // Ensure cost is sent as estCost to match Dashboard calculation logic
+      const payload = { 
+        ...formData, 
+        estCost: Number(formData.cost) || 0 
+      };
+      
+      const res = await API.post("/todos", payload);
+      setTodos(prev => [res.data, ...prev]);
       setFormData({ task: "", cost: "", startDate: "", endDate: "" });
+      
+      refreshDashboard();
     } catch (err) {
       alert("Failed to create task");
     }
   };
 
-  const toggleStatus = async (id, currentStatus) => {
-    if (currentStatus === "completed") return;
+  const toggleStatus = async (id, isCurrentlyCompleted) => {
+    // Optimization: Don't do anything if already completed unless you want to allow unchecking
     try {
-      await API.patch(`/todos/${id}`, { status: "completed" });
-      setTodos(prev => prev.map(t => t._id === id ? { ...t, status: "completed" } : t)
-                             .sort((a, b) => (a.status === 'completed') - (b.status === 'completed')));
+      const newStatus = !isCurrentlyCompleted;
+      
+      // Update Backend
+      await API.patch(`/todos/${id}`, { 
+        status: newStatus ? "completed" : "pending", 
+        completed: newStatus 
+      });
+
+      // Update Local State & Re-sort
+      setTodos(prev => {
+        const updated = prev.map(t => 
+          t._id === id ? { ...t, completed: newStatus, status: newStatus ? "completed" : "pending" } : t
+        );
+        return updated.sort((a, b) => (a.completed === b.completed ? 0 : a.completed ? 1 : -1));
+      });
+
+      // Crucial: Tell Dashboard the "Executed" vs "Pipeline" totals have changed
+      refreshDashboard();
     } catch (err) {
       alert(err.response?.data?.message || "Update failed");
     }
@@ -70,15 +104,26 @@ export default function TodoPage() {
     if (!window.confirm("Are you sure you want to delete this task?")) return;
     try {
       await API.delete(`/todos/${id}`);
-      setTodos(todos.filter(t => t._id !== id));
+      setTodos(prev => prev.filter(t => t._id !== id));
+      refreshDashboard();
     } catch (err) {
       alert(err.response?.data?.message || "Delete failed");
     }
   };
 
+  const openExpenseDetails = (todo) => {
+    setSelectedTodo(todo);
+    setIsModalOpen(true);
+  };
+
   return (
     <div className="p-4 sm:p-8 max-w-5xl mx-auto space-y-8">
-      {/* Header Section */}
+      <ExpenseViewModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        data={selectedTodo} 
+      />
+
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-black text-zinc-900 uppercase tracking-tighter">Planned Tasks</h1>
@@ -133,14 +178,13 @@ export default function TodoPage() {
             />
           </div>
           <div className="flex items-end">
-            <button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-orange-500/30 uppercase text-xs tracking-widest active:scale-95">
+            <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-orange-500/30 uppercase text-xs tracking-widest active:scale-95">
               <Plus className="w-4 h-4" /> Add
             </button>
           </div>
         </form>
       </div>
 
-      {/* Task List Section */}
       <Card className="border-none bg-transparent shadow-none">
         <CardHeader className="px-0">
           <CardTitle className="text-sm font-black flex items-center gap-2 text-zinc-500 uppercase tracking-widest">
@@ -161,44 +205,53 @@ export default function TodoPage() {
           ) : (
             <div className="grid grid-cols-1 gap-3">
               {todos.map((todo) => {
-                // 2. Normalize ownership check (Handles populated or unpopulated recordedBy)
                 const creatorId = todo.recordedBy?._id || todo.recordedBy;
                 const isOwner = String(creatorId) === String(currentUserId);
+                const displayCost = todo.estCost || todo.cost || 0;
+                const isDone = todo.completed || todo.status === 'completed';
                 
                 return (
                   <div 
                     key={todo._id} 
-                    className={`group flex items-center justify-between p-5 rounded-[1.5rem] border transition-all ${
-                      todo.status === 'completed' 
-                      ? 'bg-zinc-50 border-zinc-100 opacity-60' 
+                    onClick={() => openExpenseDetails(todo)}
+                    className={`group flex items-center justify-between p-5 rounded-[1.5rem] border transition-all cursor-pointer ${
+                      isDone 
+                      ? 'bg-zinc-50 border-zinc-100 opacity-70' 
                       : 'bg-white border-zinc-100 hover:border-orange-200 shadow-sm'
                     }`}
                   >
                     <div className="flex items-center gap-5">
                       <button 
-                        onClick={() => toggleStatus(todo._id, todo.status)}
-                        disabled={todo.status === 'completed' || !isOwner}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleStatus(todo._id, isDone);
+                        }}
+                        disabled={!isOwner}
                         className={`transition-transform ${
-                          todo.status === 'completed' || !isOwner 
+                          !isOwner 
                           ? 'cursor-not-allowed opacity-50' 
                           : 'hover:scale-110 active:scale-90'
                         }`}
                       >
-                        {todo.status === 'completed' ? 
-                          <CheckCircle2 className="w-8 h-8 text-green-500" /> : 
-                          <Circle className={`w-8 h-8 ${!isOwner ? 'text-zinc-100' : 'text-zinc-200 hover:text-orange-500'}`} />
+                        {isDone ? 
+                          <CheckCircle2 className="w-8 h-8 text-emerald-500" /> : 
+                          <Circle className={`w-8 h-8 ${!isOwner ? 'text-zinc-100' : 'text-zinc-200 group-hover:text-orange-500'}`} />
                         }
                       </button>
                       <div>
-                        <div className="flex items-center gap-3">
-                          <h4 className={`text-base font-bold capitalize ${todo.status === 'completed' ? 'line-through text-zinc-400' : 'text-zinc-800'}`}>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <h4 className={`text-base font-bold capitalize ${isDone ? 'line-through text-zinc-400' : 'text-zinc-800'}`}>
                             {todo.task}
                           </h4>
-                          {todo.cost > 0 && (
-                            <span className="px-2 py-0.5 bg-orange-50 text-orange-600 text-[10px] font-black rounded-full border border-orange-100 uppercase">
-                              {Number(todo.cost).toLocaleString()} RWF
-                            </span>
+                          
+                          {displayCost > 0 && (
+                            <div className={`flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-black rounded-full border uppercase transition-all ${
+                              isDone ? 'bg-zinc-100 text-zinc-400 border-zinc-200' : 'bg-orange-50 text-orange-600 border-orange-100'
+                            }`}>
+                              {Number(displayCost).toLocaleString()} RWF
+                            </div>
                           )}
+
                           {!isOwner && (
                             <div className="flex items-center gap-1 text-[9px] bg-zinc-100 px-2 py-0.5 rounded text-zinc-400 font-bold uppercase tracking-widest">
                                <Lock className="w-2.5 h-2.5" /> Read Only
@@ -207,7 +260,7 @@ export default function TodoPage() {
                         </div>
                         <div className="flex items-center gap-4 mt-1 text-[10px] font-black text-zinc-400 uppercase tracking-tighter">
                           <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3 text-orange-500" /> 
+                            <Calendar className={`w-3 h-3 ${isDone ? 'text-zinc-300' : 'text-orange-500'}`} /> 
                             {new Date(todo.startDate).toLocaleDateString('en-GB')}
                           </span>
                           <span className="text-zinc-200">—</span>
@@ -227,7 +280,10 @@ export default function TodoPage() {
 
                     {isOwner && (
                       <button 
-                        onClick={() => deleteTodo(todo._id)} 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteTodo(todo._id);
+                        }} 
                         className="p-3 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all md:opacity-0 group-hover:opacity-100"
                       >
                         <Trash2 className="w-5 h-5" />
