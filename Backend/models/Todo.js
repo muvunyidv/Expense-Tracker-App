@@ -6,13 +6,19 @@ const todoSchema = new mongoose.Schema({
     required: true,
     trim: true 
   },
+  cost: {
+    type: Number,
+    required: false,
+    default: 0,
+    min: 0 // Prevents entering negative financial values
+  },
   startDate: { 
     type: Date, 
     required: true 
   },
   endDate: { 
     type: Date, 
-    required: true 
+    required: false 
   },
   status: { 
     type: String, 

@@ -1,12 +1,30 @@
 import { useState, useEffect } from "react";
-import { CheckCircle2, Circle, Calendar, Plus, Trash2, Loader2, ListTodo, AlertCircle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { CheckCircle2, Circle, Calendar, Plus, Trash2, Loader2, ListTodo, AlertCircle, Banknote, Lock, User } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
 import API from "../api";
 
 export default function TodoPage() {
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState({ task: "", startDate: "", endDate: "" });
+  const [formData, setFormData] = useState({ task: "", cost: "", startDate: "", endDate: "" });
+  const [currentUserId, setCurrentUserId] = useState(null);
+
+  // 1. Get User ID from Token (More reliable than localStorage)
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(window.atob(base64));
+        // Use the same key as your middleware (id)
+        setCurrentUserId(payload.id); 
+      } catch (e) {
+        console.error("Token decoding failed", e);
+      }
+    }
+    fetchTodos();
+  }, []);
 
   const fetchTodos = async () => {
     try {
@@ -21,36 +39,40 @@ export default function TodoPage() {
     }
   };
 
-  useEffect(() => { fetchTodos(); }, []);
-
   const handleCreate = async (e) => {
     e.preventDefault();
+    if (formData.endDate && new Date(formData.endDate) <= new Date(formData.startDate)) {
+      alert("Validation Error: End Date must be later than Start Date.");
+      return;
+    }
+
     try {
       const res = await API.post("/todos", formData);
       setTodos([res.data, ...todos]);
-      setFormData({ task: "", startDate: "", endDate: "" });
+      setFormData({ task: "", cost: "", startDate: "", endDate: "" });
     } catch (err) {
-      console.error("Failed to create task");
+      alert("Failed to create task");
     }
   };
 
   const toggleStatus = async (id, currentStatus) => {
-    const newStatus = currentStatus === "pending" ? "completed" : "pending";
+    if (currentStatus === "completed") return;
     try {
-      await API.patch(`/todos/${id}`, { status: newStatus });
-      setTodos(prev => prev.map(t => t._id === id ? { ...t, status: newStatus } : t)
+      await API.patch(`/todos/${id}`, { status: "completed" });
+      setTodos(prev => prev.map(t => t._id === id ? { ...t, status: "completed" } : t)
                              .sort((a, b) => (a.status === 'completed') - (b.status === 'completed')));
     } catch (err) {
-      console.error("Update failed");
+      alert(err.response?.data?.message || "Update failed");
     }
   };
 
   const deleteTodo = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this task?")) return;
     try {
       await API.delete(`/todos/${id}`);
       setTodos(todos.filter(t => t._id !== id));
     } catch (err) {
-      console.error("Delete failed");
+      alert(err.response?.data?.message || "Delete failed");
     }
   };
 
@@ -63,20 +85,32 @@ export default function TodoPage() {
           <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mt-1">Timeline & Execution</p>
         </div>
 
-        {/* FORM: Forcing white background and visible text */}
         <form 
           onSubmit={handleCreate} 
-          className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-6 rounded-[2rem] border border-zinc-200 shadow-xl shadow-zinc-200/50"
+          className="grid grid-cols-1 md:grid-cols-5 gap-4 bg-white p-6 rounded-[2rem] border border-zinc-200 shadow-xl shadow-zinc-200/50"
         >
           <div className="md:col-span-1">
             <label className="text-[10px] font-black uppercase ml-1 mb-1 block text-zinc-500">Task Name</label>
             <input 
               className="w-full p-3 rounded-xl border border-zinc-200 bg-zinc-50 text-sm text-zinc-900 placeholder:text-zinc-400 focus:ring-2 focus:ring-orange-500 focus:bg-white outline-none transition-all" 
-              placeholder="What needs to be done?"
+              placeholder="Objective?"
               value={formData.task}
               onChange={(e) => setFormData({...formData, task: e.target.value})}
               required
             />
+          </div>
+          <div>
+            <label className="text-[10px] font-black uppercase ml-1 mb-1 block text-zinc-500">Est. Cost</label>
+            <div className="relative">
+              <input 
+                type="number"
+                className="w-full p-3 pl-8 rounded-xl border border-zinc-200 bg-zinc-50 text-sm text-zinc-900 focus:ring-2 focus:ring-orange-500 focus:bg-white outline-none transition-all"
+                placeholder="0"
+                value={formData.cost}
+                onChange={(e) => setFormData({...formData, cost: e.target.value})}
+              />
+              <Banknote className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            </div>
           </div>
           <div>
             <label className="text-[10px] font-black uppercase ml-1 mb-1 block text-zinc-500">Start Date</label>
@@ -94,13 +128,13 @@ export default function TodoPage() {
               type="date" 
               className="w-full p-3 rounded-xl border border-zinc-200 bg-zinc-50 text-sm text-zinc-900 focus:ring-2 focus:ring-orange-500 focus:bg-white outline-none transition-all"
               value={formData.endDate}
+              min={formData.startDate}
               onChange={(e) => setFormData({...formData, endDate: e.target.value})}
-              required
             />
           </div>
           <div className="flex items-end">
             <button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-orange-500/30 uppercase text-xs tracking-widest active:scale-95">
-              <Plus className="w-4 h-4" /> Add Task
+              <Plus className="w-4 h-4" /> Add
             </button>
           </div>
         </form>
@@ -126,44 +160,82 @@ export default function TodoPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3">
-              {todos.map((todo) => (
-                <div 
-                  key={todo._id} 
-                  className={`group flex items-center justify-between p-5 rounded-[1.5rem] border transition-all ${
-                    todo.status === 'completed' 
-                    ? 'bg-zinc-50 border-zinc-100 opacity-60' 
-                    : 'bg-white border-zinc-100 hover:border-orange-200 shadow-sm'
-                  }`}
-                >
-                  <div className="flex items-center gap-5">
-                    <button 
-                      onClick={() => toggleStatus(todo._id, todo.status)}
-                      className="transition-transform hover:scale-110 active:scale-90"
-                    >
-                      {todo.status === 'completed' ? 
-                        <CheckCircle2 className="w-8 h-8 text-green-500" /> : 
-                        <Circle className="w-8 h-8 text-zinc-200 hover:text-orange-500" />
-                      }
-                    </button>
-                    <div>
-                      <h4 className={`text-base font-bold capitalize ${todo.status === 'completed' ? 'line-through text-zinc-400' : 'text-zinc-800'}`}>
-                        {todo.task}
-                      </h4>
-                      <div className="flex items-center gap-4 mt-1 text-[10px] font-black text-zinc-400 uppercase tracking-tighter">
-                        <span className="flex items-center gap-1"><Calendar className="w-3 h-3 text-orange-500" /> {new Date(todo.startDate).toLocaleDateString('en-GB')}</span>
-                        <span className="text-zinc-200">—</span>
-                        <span>{new Date(todo.endDate).toLocaleDateString('en-GB')}</span>
+              {todos.map((todo) => {
+                // 2. Normalize ownership check (Handles populated or unpopulated recordedBy)
+                const creatorId = todo.recordedBy?._id || todo.recordedBy;
+                const isOwner = String(creatorId) === String(currentUserId);
+                
+                return (
+                  <div 
+                    key={todo._id} 
+                    className={`group flex items-center justify-between p-5 rounded-[1.5rem] border transition-all ${
+                      todo.status === 'completed' 
+                      ? 'bg-zinc-50 border-zinc-100 opacity-60' 
+                      : 'bg-white border-zinc-100 hover:border-orange-200 shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-center gap-5">
+                      <button 
+                        onClick={() => toggleStatus(todo._id, todo.status)}
+                        disabled={todo.status === 'completed' || !isOwner}
+                        className={`transition-transform ${
+                          todo.status === 'completed' || !isOwner 
+                          ? 'cursor-not-allowed opacity-50' 
+                          : 'hover:scale-110 active:scale-90'
+                        }`}
+                      >
+                        {todo.status === 'completed' ? 
+                          <CheckCircle2 className="w-8 h-8 text-green-500" /> : 
+                          <Circle className={`w-8 h-8 ${!isOwner ? 'text-zinc-100' : 'text-zinc-200 hover:text-orange-500'}`} />
+                        }
+                      </button>
+                      <div>
+                        <div className="flex items-center gap-3">
+                          <h4 className={`text-base font-bold capitalize ${todo.status === 'completed' ? 'line-through text-zinc-400' : 'text-zinc-800'}`}>
+                            {todo.task}
+                          </h4>
+                          {todo.cost > 0 && (
+                            <span className="px-2 py-0.5 bg-orange-50 text-orange-600 text-[10px] font-black rounded-full border border-orange-100 uppercase">
+                              {Number(todo.cost).toLocaleString()} RWF
+                            </span>
+                          )}
+                          {!isOwner && (
+                            <div className="flex items-center gap-1 text-[9px] bg-zinc-100 px-2 py-0.5 rounded text-zinc-400 font-bold uppercase tracking-widest">
+                               <Lock className="w-2.5 h-2.5" /> Read Only
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 mt-1 text-[10px] font-black text-zinc-400 uppercase tracking-tighter">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3 text-orange-500" /> 
+                            {new Date(todo.startDate).toLocaleDateString('en-GB')}
+                          </span>
+                          <span className="text-zinc-200">—</span>
+                          <span>
+                            {todo.endDate 
+                              ? new Date(todo.endDate).toLocaleDateString('en-GB') 
+                              : "No Deadline"}
+                          </span>
+                          {todo.recordedBy?.username && (
+                             <span className="flex items-center gap-1 text-orange-400/70">
+                               <User className="w-3 h-3" /> {todo.recordedBy.username}
+                             </span>
+                          )}
+                        </div>
                       </div>
                     </div>
+
+                    {isOwner && (
+                      <button 
+                        onClick={() => deleteTodo(todo._id)} 
+                        className="p-3 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all md:opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    )}
                   </div>
-                  <button 
-                    onClick={() => deleteTodo(todo._id)} 
-                    className="p-3 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all md:opacity-0 group-hover:opacity-100"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
