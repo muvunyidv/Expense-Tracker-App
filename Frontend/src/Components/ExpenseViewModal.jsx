@@ -13,16 +13,23 @@ export default function ExpenseViewModal({ isOpen, onClose, data }) {
   // Supports both Todo (task/cost) and Expense (description/amount) schemas
   const title = data.task || data.description || data.requestTitle || "Detail View";
   const amount = data.cost || data.amount || 0;
-  const rawDate = data.startDate || data.date || data.createdAt;
   
+  // Date Handling
+  const rawStartDate = data.startDate || data.date || data.createdAt;
+  const rawEndDate = data.endDate;
+
+  const formattedStartDate = (rawStartDate && rawStartDate !== "") 
+    ? new Date(rawStartDate).toLocaleDateString('en-GB') 
+    : "No Date Set";
+
+  const formattedEndDate = (rawEndDate && rawEndDate !== "") 
+    ? new Date(rawEndDate).toLocaleDateString('en-GB') 
+    : "Not Specified";
+
   // Logic to determine if this is a Plan/Todo item
   const isPlan = !!data.task;
   const status = data.status || "pending";
   const isCompleted = status === "completed" || status === "approved";
-
-  const formattedDate = (rawDate && rawDate !== "") 
-    ? new Date(rawDate).toLocaleDateString('en-GB') 
-    : "No Date Set";
 
   const category = data.categoryId?.name || data.category || (isPlan ? "Planned Strategy" : "General");
   const notes = data.notes || data.details || "No additional information provided.";
@@ -35,7 +42,7 @@ export default function ExpenseViewModal({ isOpen, onClose, data }) {
           
           {/* Header Section */}
           <div className="relative h-36 bg-orange-500 p-8 flex items-end">
-            {/* Close Button - Top Right */}
+            {/* Close Button */}
             <button 
               onClick={onClose} 
               className="absolute top-6 right-6 p-2 bg-white/20 hover:bg-white/30 rounded-full text-white transition-all z-50"
@@ -43,7 +50,7 @@ export default function ExpenseViewModal({ isOpen, onClose, data }) {
               <X className="w-5 h-5" />
             </button>
 
-            {/* Status Badge - Top Left (Only for Plans) */}
+            {/* Status Badge */}
             {isPlan && (
               <div className="absolute top-7 left-8">
                 <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm ${
@@ -79,21 +86,30 @@ export default function ExpenseViewModal({ isOpen, onClose, data }) {
               </div>
             </div>
 
-            {/* Info Grid */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-2xl border border-zinc-100 bg-white shadow-sm">
-                <div className="flex items-center gap-2 mb-1">
-                  <Tag className="w-3.5 h-3.5 text-orange-500" />
-                  <span className="text-[9px] text-zinc-400 font-black uppercase">Category</span>
-                </div>
-                <p className="text-xs font-bold text-zinc-800 truncate">{category}</p>
+            {/* Category Section */}
+            <div className="p-4 rounded-2xl border border-zinc-100 bg-white shadow-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <Tag className="w-3.5 h-3.5 text-orange-500" />
+                <span className="text-[9px] text-zinc-400 font-black uppercase">Category</span>
               </div>
+              <p className="text-xs font-bold text-zinc-800">{category}</p>
+            </div>
+
+            {/* Dates Grid (Start and End) */}
+            <div className="grid grid-cols-2 gap-4">
               <div className="p-4 rounded-2xl border border-zinc-100 bg-white shadow-sm">
                 <div className="flex items-center gap-2 mb-1">
                   <Calendar className="w-3.5 h-3.5 text-orange-500" />
                   <span className="text-[9px] text-zinc-400 font-black uppercase">Start Date</span>
                 </div>
-                <p className="text-xs font-bold text-zinc-800">{formattedDate}</p>
+                <p className="text-xs font-bold text-zinc-800">{formattedStartDate}</p>
+              </div>
+              <div className="p-4 rounded-2xl border border-zinc-100 bg-white shadow-sm">
+                <div className="flex items-center gap-2 mb-1">
+                  <Calendar className="w-3.5 h-3.5 text-red-500" />
+                  <span className="text-[9px] text-zinc-400 font-black uppercase">End Date</span>
+                </div>
+                <p className="text-xs font-bold text-zinc-800">{formattedEndDate}</p>
               </div>
             </div>
 

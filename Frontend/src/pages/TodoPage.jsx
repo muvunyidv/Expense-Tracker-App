@@ -5,9 +5,17 @@ import API from "../api";
 import ExpenseViewModal from "../Components/ExpenseViewModal";
 
 export default function TodoPage() {
+  // Helper to get today's date in YYYY-MM-DD format
+  const getTodayDate = () => new Date().toISOString().split('T')[0];
+
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState({ task: "", cost: "", startDate: "", endDate: "" });
+  const [formData, setFormData] = useState({ 
+    task: "", 
+    cost: "", 
+    startDate: getTodayDate(), // Default to current date
+    endDate: "" 
+  });
   const [currentUserId, setCurrentUserId] = useState(null);
 
   // Modal State
@@ -17,7 +25,6 @@ export default function TodoPage() {
   // Helper to notify Dashboard (Sidebar & Top Widgets) to refresh
   const refreshDashboard = useCallback(() => {
     window.dispatchEvent(new Event("plansUpdated"));
-    // Also trigger expensesUpdated just in case your summary logic relies on it
     window.dispatchEvent(new Event("expensesUpdated"));
   }, []);
 
@@ -25,7 +32,6 @@ export default function TodoPage() {
     try {
       setLoading(true);
       const res = await API.get("/todos");
-      // Sort: Pending first, then Completed
       const sorted = res.data.sort((a, b) => (a.completed === b.completed ? 0 : a.completed ? 1 : -1));
       setTodos(sorted);
     } catch (err) {
@@ -58,7 +64,6 @@ export default function TodoPage() {
     }
 
     try {
-      // Ensure cost is sent as estCost to match Dashboard calculation logic
       const payload = { 
         ...formData, 
         estCost: Number(formData.cost) || 0 
@@ -66,7 +71,14 @@ export default function TodoPage() {
       
       const res = await API.post("/todos", payload);
       setTodos(prev => [res.data, ...prev]);
-      setFormData({ task: "", cost: "", startDate: "", endDate: "" });
+      
+      // Reset form while keeping the current date as default
+      setFormData({ 
+        task: "", 
+        cost: "", 
+        startDate: getTodayDate(), 
+        endDate: "" 
+      });
       
       refreshDashboard();
     } catch (err) {
@@ -75,17 +87,13 @@ export default function TodoPage() {
   };
 
   const toggleStatus = async (id, isCurrentlyCompleted) => {
-    // Optimization: Don't do anything if already completed unless you want to allow unchecking
     try {
       const newStatus = !isCurrentlyCompleted;
-      
-      // Update Backend
       await API.patch(`/todos/${id}`, { 
         status: newStatus ? "completed" : "pending", 
         completed: newStatus 
       });
 
-      // Update Local State & Re-sort
       setTodos(prev => {
         const updated = prev.map(t => 
           t._id === id ? { ...t, completed: newStatus, status: newStatus ? "completed" : "pending" } : t
@@ -93,7 +101,6 @@ export default function TodoPage() {
         return updated.sort((a, b) => (a.completed === b.completed ? 0 : a.completed ? 1 : -1));
       });
 
-      // Crucial: Tell Dashboard the "Executed" vs "Pipeline" totals have changed
       refreshDashboard();
     } catch (err) {
       alert(err.response?.data?.message || "Update failed");

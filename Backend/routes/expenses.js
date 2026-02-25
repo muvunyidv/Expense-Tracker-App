@@ -49,6 +49,7 @@ router.get('/summary/all', async (req, res) => {
 
 /* ================================
    Get all expenses (Filtered by Tenant)
+   Now populates userId for "Recorded by" feature
 ================================ */
 router.get('/', async (req, res) => {
   try {
@@ -64,7 +65,7 @@ router.get('/', async (req, res) => {
       .limit(Math.min(parseInt(limit), 200))
       .skip(parseInt(offset))
       .populate('categoryId', 'name')
-      .populate('userId', 'username'); 
+      .populate('userId', 'username'); // CRITICAL: Populates the name of the person who added it
 
     res.json(expenses);
   } catch (error) {
@@ -83,7 +84,6 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Category and amount are required' });
     }
 
-    // Verify category exists WITHIN this tenant
     const category = await Category.findOne({
       _id: categoryId,
       tenantId: req.user.tenantId
@@ -95,7 +95,7 @@ router.post('/', async (req, res) => {
 
     const expense = new Expense({
       tenantId: req.user.tenantId, 
-      userId: req.user.id,
+      userId: req.user.id, // Linking the current user
       categoryId,
       amount,
       description,
@@ -104,7 +104,12 @@ router.post('/', async (req, res) => {
     });
 
     await expense.save();
-    await expense.populate('categoryId', 'name');
+    
+    // Populate both fields so the frontend gets the names immediately
+    await expense.populate([
+      { path: 'categoryId', select: 'name' },
+      { path: 'userId', select: 'username' }
+    ]);
 
     res.status(201).json(expense);
   } catch (error) {
@@ -120,7 +125,9 @@ router.get('/:id', async (req, res) => {
     const expense = await Expense.findOne({
       _id: req.params.id,
       tenantId: req.user.tenantId
-    }).populate('categoryId', 'name').populate('userId', 'username');
+    })
+    .populate('categoryId', 'name')
+    .populate('userId', 'username');
 
     if (!expense) return res.status(404).json({ error: 'Expense not found' });
     
@@ -137,7 +144,6 @@ router.put('/:id', async (req, res) => {
   try {
     const { categoryId, amount, description, notes, date } = req.body;
 
-    // Security: Only allow updating if it's in the same tenant
     const updateQuery = req.user.role === 'manager'
       ? { _id: req.params.id, tenantId: req.user.tenantId }
       : { _id: req.params.id, userId: req.user.id, tenantId: req.user.tenantId };
@@ -146,7 +152,9 @@ router.put('/:id', async (req, res) => {
       updateQuery,
       { categoryId, amount, description, notes, date },
       { new: true }
-    ).populate('categoryId', 'name');
+    )
+    .populate('categoryId', 'name')
+    .populate('userId', 'username'); // Maintain user info on update
 
     if (!expense) return res.status(404).json({ error: 'Expense not found or unauthorized' });
 

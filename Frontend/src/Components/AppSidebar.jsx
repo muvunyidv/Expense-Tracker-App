@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { 
   LayoutDashboard, 
   Tags, 
@@ -11,7 +11,10 @@ import {
   ShieldCheck, 
   User, 
   ListTodo,
-  Activity
+  Activity,
+  CheckCircle2,
+  Clock,
+  AlertCircle
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,25 +32,82 @@ const menuItems = [
   { title: "Summary", icon: LayoutDashboard, url: "#summary" },
   { title: "Categories", icon: Tags, url: "#categories" },
   { title: "Requests", icon: ClipboardList, url: "#plans" }, 
-  { title: "Plans", icon: ListTodo, url: "#todos" },         
+  { title: "Plans", icon: ListTodo, url: "#todos" },          
 ];
 
-export function AppSidebar({ totals = { summary: 0, plans: 0, todos: { pipeline: 0, completed: 0 } }, user = {} }) {
+export function Footer() {
+  return (
+    <footer className="mt-auto py-8 px-6 border-t border-zinc-100 bg-white">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+          <span className="text-xs font-black uppercase tracking-widest text-zinc-900">
+            EXPENSE<span className="text-orange-500">.</span>TRK
+          </span>
+          <span className="text-[10px] text-zinc-400 font-bold ml-2">
+            © 2026 • PROFESSIONAL FINANCIAL ANALYTICS
+          </span>
+        </div>
+        
+        <div className="flex items-center gap-8">
+          {["Privacy", "Terms", "Support"].map((item) => (
+            <a 
+              key={item} 
+              href={`#${item.toLowerCase()}`} 
+              className="text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-orange-500 transition-colors"
+            >
+              {item}
+            </a>
+          ))}
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+export function AppSidebar({ totals = {}, user = {} }) {
   const [activeHash, setActiveHash] = useState(() => window.location.hash || "#summary");
+  const [activeTab, setActiveTab] = useState("pending"); 
+  const [liveTotals, setLiveTotals] = useState(totals);
   const [copied, setCopied] = useState(false);
   const { isMobile, setOpen } = useSidebar();
+  
+  // Ref to lock state once live data is received to prevent prop-sync flickers
+  const hasLiveUpdate = useRef(false);
 
   useEffect(() => {
-    const onRefresh = () => setActiveHash(window.location.hash || "#summary");
+    if (!hasLiveUpdate.current) {
+      setLiveTotals(totals);
+    }
+  }, [totals]);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      setActiveHash(window.location.hash || "#summary");
+    };
+
+    const handlePlansUpdate = (e) => {
+      if (e.detail?.plansByStatus) {
+        hasLiveUpdate.current = true;
+        setLiveTotals(prev => ({
+          ...prev,
+          plansByStatus: e.detail.plansByStatus
+        }));
+      }
+    };
+
+    const handleTabChange = (e) => {
+      if (e.detail) setActiveTab(e.detail);
+    };
     
-    // Listen for URL changes
-    window.addEventListener("hashchange", onRefresh);
-    // Listen for manual updates from the TodoPage data changes
-    window.addEventListener("plansUpdated", onRefresh);
+    window.addEventListener("hashchange", onHashChange);
+    window.addEventListener("plansUpdated", handlePlansUpdate);
+    window.addEventListener("tabChanged", handleTabChange);
 
     return () => {
-      window.removeEventListener("hashchange", onRefresh);
-      window.removeEventListener("plansUpdated", onRefresh);
+      window.removeEventListener("hashchange", onHashChange);
+      window.removeEventListener("plansUpdated", handlePlansUpdate);
+      window.removeEventListener("tabChanged", handleTabChange);
     };
   }, []);
 
@@ -67,36 +127,58 @@ export function AppSidebar({ totals = { summary: 0, plans: 0, todos: { pipeline:
   const isPersonalUser = user?.role === "user";
 
   const getActiveData = () => {
-    switch (activeHash) {
+    const hash = activeHash || "#summary";
+    
+    switch (hash) {
       case "#todos":
         return { 
           label: "Active Pipeline", 
-          value: totals.todos?.pipeline || 0,
-          icon: <Activity className="w-4 h-4 text-white" />
+          value: liveTotals.todos?.pipeline || 0,
+          icon: <Activity className="w-4 h-4 text-white" />,
+          color: "bg-orange-600" 
         };
       case "#plans":
-        return { 
-          label: "Total Requested", 
-          value: totals.plans || 0,
-          icon: <ClipboardList className="w-4 h-4 text-white" />
-        };
+        if (activeTab === "approved") {
+          return {
+            label: "Approved Requests",
+            value: liveTotals.plansByStatus?.approved || 0,
+            icon: <CheckCircle2 className="w-4 h-4 text-white" />,
+            color: "bg-green-600" 
+          };
+        } else if (activeTab === "rejected") {
+          return {
+            label: "Rejected Requests",
+            value: liveTotals.plansByStatus?.rejected || 0,
+            icon: <AlertCircle className="w-4 h-4 text-white" />,
+            color: "bg-zinc-800"
+          };
+        } else {
+          return {
+            label: "Pending Requests",
+            value: liveTotals.plansByStatus?.pending || 0,
+            icon: <Clock className="w-4 h-4 text-white" />,
+            color: "bg-orange-500" 
+          };
+        }
       case "#categories":
         return { 
           label: "Category Total", 
-          value: totals.summary || 0,
-          icon: <Tags className="w-4 h-4 text-white" />
+          value: liveTotals.summary || 0,
+          icon: <Tags className="w-4 h-4 text-white" />,
+          color: "bg-orange-500"
         };
       case "#summary":
       default:
         return { 
           label: isManager ? "Organization Total" : "Total Expenses", 
-          value: totals.summary || 0,
-          icon: <Wallet className="w-4 h-4 text-white" />
+          value: liveTotals.summary || 0,
+          icon: <Wallet className="w-4 h-4 text-white" />,
+          color: "bg-orange-500"
         };
     }
   };
 
-  const { label, value, icon } = getActiveData();
+  const { label, value, icon, color } = getActiveData();
 
   return (
     <Sidebar className="border-r border-zinc-200 bg-white">
@@ -107,9 +189,8 @@ export function AppSidebar({ totals = { summary: 0, plans: 0, todos: { pipeline:
               EXPENSE<span className="text-orange-500">.</span>TRK
             </SidebarGroupLabel>
 
-            {/* IDENTITY CARD */}
             <div className="px-2 mb-8">
-              <div className="flex items-center gap-3 p-3 rounded-2xl border border-orange-100 bg-orange-50/50 transition-all">
+              <div className="flex items-center gap-3 p-3 rounded-2xl border border-orange-100 bg-orange-50/50">
                 <div className="h-11 w-11 rounded-xl flex items-center justify-center text-white shadow-lg bg-orange-500 shadow-orange-200">
                   {isManager ? <ShieldCheck className="w-6 h-6" /> : isPersonalUser ? <User className="w-6 h-6" /> : <UserCircle className="w-6 h-6" />}
                 </div>
@@ -137,10 +218,10 @@ export function AppSidebar({ totals = { summary: 0, plans: 0, todos: { pipeline:
                         asChild 
                         active={isActive}
                         onClick={handleNavigation}
-                        className={`py-6 rounded-xl transition-all border border-transparent ${
+                        className={`py-6 rounded-xl transition-all border ${
                           isActive 
-                            ? "bg-zinc-900 text-white shadow-xl shadow-zinc-200 border-zinc-900" 
-                            : "hover:bg-zinc-50 hover:border-zinc-100"
+                            ? "bg-zinc-100 text-zinc-900 shadow-sm border-zinc-200" 
+                            : "hover:bg-zinc-50 hover:border-zinc-100 border-transparent text-zinc-500"
                         }`}
                       >
                         <a href={item.url} className="flex items-center gap-3">
@@ -148,7 +229,7 @@ export function AppSidebar({ totals = { summary: 0, plans: 0, todos: { pipeline:
                             isActive ? 'text-orange-500' : 'text-zinc-400'
                           }`} />
                           <span className={`font-black uppercase text-[11px] tracking-widest ${
-                            isActive ? 'text-white' : 'text-zinc-500'
+                            isActive ? 'text-zinc-900' : 'text-zinc-500'
                           }`}>
                             {item.title}
                           </span>
@@ -162,7 +243,6 @@ export function AppSidebar({ totals = { summary: 0, plans: 0, todos: { pipeline:
           </SidebarGroup>
 
           <div className="mt-auto p-4 space-y-4">
-            {/* RECRUIT STAFF - MANAGER ONLY */}
             {isManager && user?.inviteCode && (
               <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-4 shadow-lg shadow-orange-100">
                 <div className="flex items-center gap-2 mb-3">
@@ -174,17 +254,12 @@ export function AppSidebar({ totals = { summary: 0, plans: 0, todos: { pipeline:
                   className="w-full flex items-center justify-between bg-white/10 border border-white/20 px-3 py-2.5 rounded-xl hover:bg-white/20 transition-all group active:scale-95"
                 >
                   <span className="text-sm font-black text-white tracking-widest">{user.inviteCode}</span>
-                  {copied ? (
-                    <Check className="w-4 h-4 text-white" />
-                  ) : (
-                    <Copy className="w-4 h-4 text-orange-200 group-hover:text-white" />
-                  )}
+                  {copied ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4 text-orange-200 group-hover:text-white" />}
                 </button>
               </div>
             )}
 
-            {/* TOTAL WIDGET - Dynamic based on Page */}
-            <div className="relative overflow-hidden rounded-2xl p-5 shadow-xl bg-orange-600 active:scale-95 transition-all">
+            <div className={`relative overflow-hidden rounded-2xl p-5 shadow-xl transition-all duration-500 ${color} active:scale-95`}>
               <div className="absolute -right-2 -top-2 h-16 w-16 rounded-full bg-white/10 blur-xl" />
               <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-3">
@@ -207,35 +282,5 @@ export function AppSidebar({ totals = { summary: 0, plans: 0, todos: { pipeline:
         </div>
       </SidebarContent>
     </Sidebar>
-  );
-}
-
-export function Footer() {
-  const currentYear = new Date().getFullYear();
-
-  return (
-    <footer className="mt-auto py-10 px-6 border-t border-zinc-100 bg-zinc-50/50">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-        <div className="flex flex-col items-center md:items-start gap-1.5">
-          <div className="flex items-center gap-2">
-             <div className="h-2.5 w-2.5 rounded-full bg-orange-500" />
-             <p className="text-sm font-black text-zinc-900 uppercase tracking-tighter">
-                EXPENSE<span className="text-orange-500">.</span>TRK
-             </p>
-          </div>
-          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-            © {currentYear} • PROFESSIONAL FINANCIAL ANALYTICS
-          </p>
-        </div>
-
-        <div className="flex items-center gap-8">
-          {["Privacy", "Terms", "Support"].map((link) => (
-            <a key={link} href="#" className="text-[10px] font-black text-zinc-400 hover:text-orange-500 uppercase tracking-[0.2em] transition-all">
-              {link}
-            </a>
-          ))}
-        </div>
-      </div>
-    </footer>
   );
 }

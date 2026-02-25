@@ -36,7 +36,6 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
     try {
       setLoading(true);
       const res = await API.get("/expenses");
-      // Sort by date descending (newest first)
       const sorted = (res.data || []).sort(
         (a, b) => new Date(b.date) - new Date(a.date)
       );
@@ -67,10 +66,10 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
   };
 
   const filteredExpenses = recentExpenses.filter((expense) => {
-    // FUNCTIONALITY: Matches description OR the username of the person who recorded it
+    // UPDATED: Matches description OR the username from the populated userId field
     const matchesSearch = 
         expense.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        expense.recordedBy?.username?.toLowerCase().includes(searchQuery.toLowerCase());
+        expense.userId?.username?.toLowerCase().includes(searchQuery.toLowerCase());
     
     if (!matchesSearch) return false;
 
@@ -153,21 +152,26 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
                         <div className="font-bold text-foreground capitalize">
                           {expense.description}
                         </div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
                           <span className="font-semibold text-orange-500/80">
                             {expense.categoryId?.name || "Uncategorized"}
                           </span>
-                          {" • "}{formatDate(expense.date)}
+                          <span>•</span>
+                          <span>{formatDate(expense.date)}</span>
+                          
+                          {/* UPDATED: Displays username from populated userId */}
+                          {expense.userId?.username && (
+                            <>
+                              <span>•</span>
+                              <div className="flex items-center gap-1 opacity-80">
+                                <User className="w-3 h-3" />
+                                <span className="uppercase font-medium tracking-tight">
+                                  {expense.userId.username}
+                                </span>
+                              </div>
+                            </>
+                          )}
                         </div>
-                        {/* FUNCTIONALITY: Show the member who recorded it (Role-based UI) */}
-                        {expense.recordedBy?.username && (
-                           <div className="flex items-center gap-1 mt-1 opacity-70">
-                              <User className="w-3 h-3 text-muted-foreground" />
-                              <span className="text-[10px] font-medium uppercase tracking-tight">
-                                {expense.recordedBy.username}
-                              </span>
-                           </div>
-                        )}
                       </div>
                     </div>
                     

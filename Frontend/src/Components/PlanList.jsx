@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   ListChecks,
   Clock,
@@ -38,6 +38,57 @@ export function PlanList() {
   const [decisionMode, setDecisionMode] = useState(null); 
   const [decisionData, setDecisionData] = useState({ amount: 0, comment: "" });
 
+  // Broadcast Tab Changes specifically for Sidebar calculation logic
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("tabChanged", { detail: currentFilter }));
+  }, [currentFilter]);
+
+  // Fetch data with centralized calculation logic
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [plansRes, catsRes] = await Promise.all([
+        API.get("/plans"),
+        API.get("/categories"),
+      ]);
+      
+      const plansData = plansRes.data || [];
+      setPlans(plansData);
+      setCategories(catsRes.data || []);
+
+      // CALCULATE TOTALS FOR SIDEBAR
+      const plansByStatus = {
+        pending: plansData
+          .filter(p => p.status?.toLowerCase().trim() === "pending")
+          .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0),
+        
+        approved: plansData
+          .filter(p => p.status?.toLowerCase().trim() === "approved")
+          .reduce((acc, curr) => {
+            const val = (Number(curr.approvedAmount) > 0) ? Number(curr.approvedAmount) : Number(curr.amount);
+            return acc + (val || 0);
+          }, 0),
+        
+        rejected: plansData
+          .filter(p => p.status?.toLowerCase().trim() === "rejected")
+          .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0),
+      };
+
+      // Broadcast update to Sidebar
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("plansUpdated", { 
+          detail: { plansByStatus } 
+        }));
+        window.dispatchEvent(new CustomEvent("tabChanged", { detail: currentFilter }));
+      }, 50);
+
+    } catch (error) {
+      // Silent error handling for production
+    } finally {
+      setLoading(false);
+    }
+  }, [currentFilter]);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -45,33 +96,17 @@ export function PlanList() {
         const payload = JSON.parse(atob(token.split(".")[1]));
         setUserData({ role: payload.role || "staff", id: payload.id });
       } catch (e) {
-        console.error("Token parse error", e);
+        // Token parse error handling
       }
     }
     fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [plansRes, catsRes] = await Promise.all([
-        API.get("/plans"),
-        API.get("/categories"),
-      ]);
-      setPlans(plansRes.data || []);
-      setCategories(catsRes.data || []);
-    } catch (error) {
-      console.error("Failed to load data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [fetchData]);
 
   const handleStatusUpdate = async (id, newStatus) => {
     try {
       const payload = {
         status: newStatus,
-        approvedAmount: newStatus === "approved" ? decisionData.amount : 0,
+        approvedAmount: newStatus === "approved" ? Number(decisionData.amount) : 0,
         managerComment: decisionData.comment,
       };
 
@@ -83,7 +118,7 @@ export function PlanList() {
 
       setDecisionMode(null);
       setDecisionData({ amount: 0, comment: "" });
-      fetchData();
+      fetchData(); 
     } catch (error) {
       alert("Action failed: Check your permissions.");
     }
@@ -93,23 +128,11 @@ export function PlanList() {
     const s = status?.toLowerCase().trim();
     switch (s) {
       case "approved":
-        return {
-          icon: <CheckCircle2 className="w-4 h-4" />,
-          color: "text-green-500 bg-green-500/10",
-          label: "Approved",
-        };
+        return { icon: <CheckCircle2 className="w-4 h-4" />, color: "text-green-500 bg-green-500/10", label: "Approved" };
       case "rejected":
-        return {
-          icon: <XCircle className="w-4 h-4" />,
-          color: "text-red-500 bg-red-500/10",
-          label: "Rejected",
-        };
+        return { icon: <XCircle className="w-4 h-4" />, color: "text-red-500 bg-red-500/10", label: "Rejected" };
       default:
-        return {
-          icon: <Clock className="w-4 h-4" />,
-          color: "text-amber-500 bg-amber-500/10",
-          label: "Pending",
-        };
+        return { icon: <Clock className="w-4 h-4" />, color: "text-amber-500 bg-amber-500/10", label: "Pending" };
     }
   };
 
@@ -119,16 +142,13 @@ export function PlanList() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-foreground uppercase">
+          <h1 className="text-3xl font-black tracking-tight text-zinc-900 uppercase">
             {userData.role === "manager" ? "Approval Queue" : "My Requests"}
           </h1>
-          <p className="text-sm text-muted-foreground italic">
-            {userData.role === "manager"
-              ? "Authorize expenditures or adjust amounts"
-              : "Track your funding requests"}
+          <p className="text-sm text-zinc-500 italic">
+            {userData.role === "manager" ? "Authorize expenditures or adjust amounts" : "Track your funding requests"}
           </p>
         </div>
         <button
@@ -139,12 +159,11 @@ export function PlanList() {
         </button>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { id: "pending", label: "Pending", icon: Clock, color: "amber" },
-          { id: "approved", label: "Approved", icon: CheckCircle2, color: "green" },
-          { id: "rejected", label: "Rejected", icon: XCircle, color: "red" },
+          { id: "pending", label: "Pending", icon: Clock },
+          { id: "approved", label: "Approved", icon: CheckCircle2 },
+          { id: "rejected", label: "Rejected", icon: XCircle },
         ].map((card) => {
           const Icon = card.icon;
           const isActive = currentFilter === card.id;
@@ -155,110 +174,86 @@ export function PlanList() {
               key={card.id}
               onClick={() => setCurrentFilter(card.id)}
               className={`p-4 border rounded-2xl flex justify-between items-center transition-all text-left ${
-                isActive
-                  ? `bg-orange-500/10 border-orange-500 shadow-md`
-                  : "bg-muted/50 border-transparent hover:bg-muted"
+                isActive ? `bg-white border-zinc-900 shadow-xl ring-1 ring-zinc-900` : "bg-zinc-50 border-transparent hover:bg-zinc-100"
               }`}
             >
               <div>
-                <span className={`text-[10px] font-bold uppercase tracking-wider ${isActive ? `text-orange-600` : "text-muted-foreground"}`}>
-                  {card.label}
-                </span>
-                <div className="text-2xl font-black text-foreground">{count}</div>
+                <span className={`text-[10px] font-black uppercase tracking-widest ${isActive ? `text-zinc-900` : "text-zinc-400"}`}>{card.label}</span>
+                <div className={`text-2xl font-black ${isActive ? 'text-zinc-900' : 'text-zinc-500'}`}>{count}</div>
               </div>
-              <Icon className={`w-8 h-8 ${isActive ? `text-orange-500` : "text-muted-foreground/30"}`} />
+              <Icon className={`w-8 h-8 ${isActive ? `text-orange-500` : "text-zinc-200"}`} />
             </button>
           );
         })}
       </div>
 
-      {/* Main List */}
-      <Card className="border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden rounded-[2rem]">
-        <CardHeader className="border-b border-border/50 bg-muted/20">
-          <CardTitle className="text-lg flex items-center gap-2">
-            {currentFilter === "pending" ? (
-              <ListChecks className="w-5 h-5 text-orange-500" />
-            ) : (
-              <History className="w-5 h-5 text-orange-500" />
-            )}
-            <span className="capitalize">{currentFilter}</span> Items
+      <Card className="border-zinc-200 shadow-xl overflow-hidden rounded-[2rem] bg-white">
+        <CardHeader className="border-b border-zinc-50 bg-zinc-50/30">
+          <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-zinc-400">
+            {currentFilter === "pending" ? <ListChecks className="w-4 h-4 text-orange-500" /> : <History className="w-4 h-4 text-orange-500" />}
+            {currentFilter} Items
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex justify-center py-20">
-              <Loader2 className="w-10 h-10 animate-spin text-orange-500" />
-            </div>
+            <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-orange-500" /></div>
           ) : filteredPlans.length === 0 ? (
             <div className="text-center py-20">
-              <ClipboardList className="w-12 h-12 text-muted/30 mx-auto mb-4" />
-              <p className="text-muted-foreground font-medium">Clear queue.</p>
+              <ClipboardList className="w-12 h-12 text-zinc-100 mx-auto mb-4" />
+              <p className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">Queue is empty</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-100 dark:divide-zinc-800">
+            <div className="divide-y divide-zinc-50">
               {filteredPlans.map((plan) => {
                 const ui = getStatusUI(plan.status);
                 const isEditing = decisionMode === plan._id;
                 const statusNormalized = plan.status?.toLowerCase().trim();
+                const isAmountChanged = statusNormalized === "approved" && plan.approvedAmount && Number(plan.approvedAmount) !== Number(plan.amount);
 
                 return (
                   <div 
                     key={plan._id} 
                     onClick={() => {
                         if (!isEditing) {
-                            const categoryName = typeof plan.category === 'object' 
-                                ? plan.category?.name 
-                                : (plan.categoryId?.name || plan.category || "General");
-
+                            const categoryName = typeof plan.category === 'object' ? plan.category?.name : (plan.categoryId?.name || plan.category || "General");
                             setSelectedPlan({
                                 ...plan,
                                 task: plan.description, 
-                                cost: plan.status === 'approved' ? plan.approvedAmount : plan.amount,      
+                                cost: plan.status === 'approved' ? (plan.approvedAmount || plan.amount) : plan.amount,      
                                 category: categoryName,
+                                endDate: plan.endDate,
                                 notes: plan.managerComment || plan.notes || "No additional information provided."
                             });
                             setIsViewModalOpen(true);
                         }
                     }}
-                    className="flex flex-col p-5 hover:bg-orange-50/30 dark:hover:bg-zinc-800/40 transition-all cursor-pointer group"
+                    className="flex flex-col p-6 hover:bg-zinc-50/50 transition-all cursor-pointer group"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-xl shrink-0 transition-transform group-hover:scale-110 ${ui.color}`}>
-                          {ui.icon}
-                        </div>
+                        <div className={`p-3 rounded-xl shrink-0 transition-transform group-hover:scale-110 ${ui.color}`}>{ui.icon}</div>
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-foreground group-hover:text-orange-600 transition-colors">
-                              {plan.description}
-                            </span>
-                            {plan.priority === "urgent" && (
-                              <span className="text-[9px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-black uppercase">
-                                Urgent
-                              </span>
-                            )}
+                            <span className="font-black text-zinc-900 uppercase text-sm tracking-tight group-hover:text-orange-600 transition-colors">{plan.description}</span>
+                            {plan.priority === "urgent" && <span className="text-[9px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-black uppercase">Urgent</span>}
                           </div>
-                          <div className="text-[11px] text-muted-foreground flex items-center gap-2 mt-0.5 uppercase font-medium">
-                            <span className="text-orange-500 font-bold">
-                                {plan.category?.name || plan.category || "General"}
-                            </span>
+                          <div className="text-[10px] text-zinc-400 flex items-center gap-2 mt-1 uppercase font-black tracking-widest">
+                            <span className="text-orange-500">{plan.category?.name || plan.category || "General"}</span>
                             <span className="opacity-30">•</span>
-                            <span className="flex items-center gap-1">
-                              <User2 className="w-3 h-3" /> {plan.userId?.username}
-                            </span>
+                            <span className="flex items-center gap-1"><User2 className="w-3 h-3" /> {plan.userId?.username}</span>
                           </div>
                         </div>
                       </div>
 
                       <div className="flex items-center justify-between sm:justify-end gap-6">
                         <div className="text-left sm:text-right">
-                          <div className="text-[10px] text-muted-foreground uppercase font-bold">Requested</div>
-                          <div className={`font-black text-lg ${statusNormalized === "approved" && plan.approvedAmount < plan.amount ? "line-through opacity-50 text-sm" : "text-foreground"}`}>
-                            {plan.amount?.toLocaleString()} Rwf
+                          <div className="text-[9px] text-zinc-400 uppercase font-black tracking-widest mb-1">Amount</div>
+                          <div className={`font-black text-lg tracking-tighter transition-all ${isAmountChanged ? "line-through opacity-30 text-sm" : "text-zinc-900"}`}>
+                            {Number(plan.amount).toLocaleString()} <span className="text-[10px] text-zinc-400">RWF</span>
                           </div>
-                          {statusNormalized === "approved" && plan.approvedAmount < plan.amount && (
-                            <div className="font-black text-green-600 text-lg">
-                              {plan.approvedAmount?.toLocaleString()} Rwf
+                          {isAmountChanged && (
+                            <div className="font-black text-lg tracking-tighter text-orange-600">
+                              {Number(plan.approvedAmount).toLocaleString()} <span className="text-[10px]">RWF</span>
                             </div>
                           )}
                         </div>
@@ -270,15 +265,15 @@ export function PlanList() {
                                 setDecisionMode(plan._id);
                                 setDecisionData({ amount: plan.amount, comment: "" });
                               }}
-                              className="p-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 shadow-lg shadow-green-600/20 active:scale-90 transition-all"
+                              className="p-3 bg-zinc-900 text-white rounded-xl hover:bg-orange-500 shadow-lg active:scale-90 transition-all"
                             >
-                              <Check className="w-5 h-5" />
+                              <Check className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleStatusUpdate(plan._id, "rejected")}
-                              className="p-2.5 bg-zinc-200 dark:bg-zinc-800 text-foreground rounded-xl hover:bg-red-500 hover:text-white active:scale-90 transition-all"
+                              className="p-3 bg-zinc-100 text-zinc-400 rounded-xl hover:bg-red-500 hover:text-white active:scale-90 transition-all"
                             >
-                              <X className="w-5 h-5" />
+                              <X className="w-4 h-4" />
                             </button>
                           </div>
                         )}
@@ -286,47 +281,45 @@ export function PlanList() {
                     </div>
 
                     {plan.managerComment && (
-                        <div className="mt-3 ml-14 p-2 px-3 bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-lg flex items-start gap-2 max-w-2xl">
-                            <MessageSquare className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
-                            <p className="text-[11px] text-blue-700 dark:text-blue-400 font-medium italic">
-                                "{plan.managerComment}" — Reviewed by Manager
-                            </p>
+                        <div className="mt-4 ml-14 p-3 bg-zinc-50 border border-zinc-100 rounded-2xl flex items-start gap-3 max-w-2xl">
+                            <MessageSquare className="w-3.5 h-3.5 text-orange-500 shrink-0 mt-0.5" />
+                            <p className="text-[11px] text-zinc-500 font-bold italic tracking-tight">"{plan.managerComment}"</p>
                         </div>
                     )}
 
                     {isEditing && (
-                      <div className="mt-4 p-8 bg-white dark:bg-white rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-2xl animate-in slide-in-from-top-4 duration-300 relative z-10" onClick={(e) => e.stopPropagation()}>
+                      <div className="mt-6 p-8 bg-white rounded-[2rem] border-2 border-zinc-900 shadow-2xl animate-in zoom-in-95 duration-200 relative z-10" onClick={(e) => e.stopPropagation()}>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-zinc-500 mb-2 block ml-1 tracking-widest">Approve Amount (Rwf)</label>
+                            <label className="text-[10px] font-black uppercase text-zinc-400 mb-2 block ml-1 tracking-widest">Final Amount (Rwf)</label>
                             <div className="relative">
                               <Edit3 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                               <input
                                 type="number"
                                 value={decisionData.amount === 0 ? "" : decisionData.amount}
-                                placeholder="Enter approved amount..."
+                                placeholder="0.00"
                                 onChange={(e) => setDecisionData({ ...decisionData, amount: e.target.value === "" ? 0 : Number(e.target.value) })}
-                                className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-white border border-zinc-200 dark:border-zinc-800 rounded-2xl font-bold text-zinc-900 dark:text-black focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all"
+                                className="w-full pl-12 pr-4 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl font-black text-zinc-900 focus:ring-0 focus:border-orange-500 outline-none transition-all"
                               />
                             </div>
                           </div>
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-zinc-500 mb-2 block ml-1 tracking-widest">Manager Comment</label>
+                            <label className="text-[10px] font-black uppercase text-zinc-400 mb-2 block ml-1 tracking-widest">Decision Note</label>
                             <div className="relative">
                               <MessageSquare className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                               <input
                                 type="text"
-                                placeholder="Add a reason for this amount..."
+                                placeholder="Add a reason..."
                                 value={decisionData.comment}
                                 onChange={(e) => setDecisionData({ ...decisionData, comment: e.target.value })}
-                                className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-white border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-900 dark:text-black font-medium focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all placeholder:text-zinc-400"
+                                className="w-full pl-12 pr-4 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-zinc-900 font-bold focus:ring-0 focus:border-orange-500 outline-none transition-all"
                               />
                             </div>
                           </div>
                         </div>
-                        <div className="flex justify-end items-center gap-6 mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800">
-                          <button onClick={() => setDecisionMode(null)} className="px-4 py-2 text-[10px] font-black uppercase text-zinc-400 hover:text-red-500 tracking-widest transition-colors">Cancel</button>
-                          <button onClick={() => handleStatusUpdate(plan._id, "approved")} className="px-10 py-4 bg-green-500 hover:bg-green-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-green-500/20 active:scale-95 transition-all">Confirm Approval</button>
+                        <div className="flex justify-end items-center gap-4 mt-8 pt-6 border-t border-zinc-50">
+                          <button onClick={() => setDecisionMode(null)} className="text-[10px] font-black uppercase text-zinc-400 hover:text-red-500 tracking-widest transition-colors">Cancel</button>
+                          <button onClick={() => handleStatusUpdate(plan._id, "approved")} className="px-8 py-4 bg-zinc-900 hover:bg-orange-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl transition-all active:scale-95">Confirm Decision</button>
                         </div>
                       </div>
                     )}
@@ -338,18 +331,8 @@ export function PlanList() {
         </CardContent>
       </Card>
 
-      <ExpenseViewModal 
-        isOpen={isViewModalOpen}
-        onClose={() => setIsViewModalOpen(false)}
-        data={selectedPlan}
-      />
-
-      <AddPlanModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        categories={categories}
-        onSuccess={fetchData}
-      />
+      <ExpenseViewModal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} data={selectedPlan} />
+      <AddPlanModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} categories={categories} onSuccess={fetchData} />
     </div>
   );
 }
