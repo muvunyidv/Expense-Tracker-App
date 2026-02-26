@@ -1,8 +1,12 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");
 const Plan = require("../models/Plan");
 const Expense = require("../models/Expense");
+const Category = require("../models/Category");
 const authMiddleware = require("../middleware/auth");
+
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 // 1. GET plans (Filtered by Silo)
 router.get("/", authMiddleware, async (req, res) => {
@@ -35,10 +39,24 @@ router.post("/", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    if (!isValidObjectId(category)) {
+      return res.status(400).json({ error: "Invalid category ID" });
+    }
+
+    const numericAmount = Number(amount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return res.status(400).json({ error: "Amount must be a valid positive number" });
+    }
+
+    const categoryDoc = await Category.findOne({ _id: category, tenantId: req.user.tenantId });
+    if (!categoryDoc) {
+      return res.status(400).json({ error: "Invalid category for your workspace" });
+    }
+
     const newPlan = new Plan({
       tenantId: req.user.tenantId,
-      description,
-      amount,
+      description: description.trim(),
+      amount: numericAmount,
       category, 
       priority: priority || "normal",
       notes,
@@ -66,6 +84,26 @@ router.post("/", authMiddleware, async (req, res) => {
 router.patch("/:id", authMiddleware, async (req, res) => {
   try {
     const { description, amount, category, priority, notes } = req.body;
+
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ error: "Invalid plan ID" });
+    }
+    if (!description?.trim() || amount == null || !category) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    if (!isValidObjectId(category)) {
+      return res.status(400).json({ error: "Invalid category ID" });
+    }
+
+    const numericAmount = Number(amount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return res.status(400).json({ error: "Amount must be a valid positive number" });
+    }
+
+    const categoryDoc = await Category.findOne({ _id: category, tenantId: req.user.tenantId });
+    if (!categoryDoc) {
+      return res.status(400).json({ error: "Invalid category for your workspace" });
+    }
     
     // Ensure the user owns the plan OR is a manager
     let query = { _id: req.params.id, tenantId: req.user.tenantId };
@@ -85,8 +123,8 @@ router.patch("/:id", authMiddleware, async (req, res) => {
 
     const updatedPlan = await Plan.findByIdAndUpdate(
       req.params.id,
-      { description, amount, category, priority, notes },
-      { new: true }
+      { description: description.trim(), amount: numericAmount, category, priority, notes },
+      { new: true, runValidators: true }
     ).populate("userId", "username").populate("category", "name");
 
     res.json(updatedPlan);
@@ -99,6 +137,10 @@ router.patch("/:id", authMiddleware, async (req, res) => {
 // 4. DELETE a plan
 router.delete("/:id", authMiddleware, async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ error: "Invalid plan ID" });
+    }
+
     let query = { _id: req.params.id, tenantId: req.user.tenantId };
     
     // Users can only delete their own plans; managers can delete any in their tenant
@@ -128,6 +170,14 @@ router.patch("/:id/status", authMiddleware, async (req, res) => {
 
     const { status, approvedAmount, managerComment } = req.body;
     const planId = req.params.id;
+    const allowedStatuses = new Set(["approved", "rejected", "pending"]);
+
+    if (!isValidObjectId(planId)) {
+      return res.status(400).json({ error: "Invalid plan ID" });
+    }
+    if (!allowedStatuses.has(status)) {
+      return res.status(400).json({ error: "Invalid status value" });
+    }
     
     const planToUpdate = await Plan.findOne({ _id: planId, tenantId: req.user.tenantId });
       
@@ -137,12 +187,16 @@ router.patch("/:id/status", authMiddleware, async (req, res) => {
 
     if (status === "approved" && planToUpdate.status !== "approved") {
       const finalAmount = approvedAmount !== undefined ? approvedAmount : planToUpdate.amount;
+      const numericFinalAmount = Number(finalAmount);
+      if (!Number.isFinite(numericFinalAmount) || numericFinalAmount < 0) {
+        return res.status(400).json({ error: "Approved amount must be a valid non-negative number" });
+      }
 
       const newExpense = new Expense({
         tenantId: planToUpdate.tenantId,
         userId: planToUpdate.userId,    
         categoryId: planToUpdate.category, 
-        amount: finalAmount,
+        amount: numericFinalAmount,
         description: `[Req-Approved] ${planToUpdate.description}`,
         notes: managerComment || `Approved by ${req.user.username}`,
         date: new Date()
@@ -155,11 +209,11 @@ router.patch("/:id/status", authMiddleware, async (req, res) => {
       planId,
       { 
         status, 
-        approvedAmount: status === "approved" ? (approvedAmount || planToUpdate.amount) : 0,
+        approvedAmount: status === "approved" ? Number(approvedAmount ?? planToUpdate.amount) : 0,
         managerComment,
         reviewedBy: req.user.id 
       },
-      { new: true }
+      { new: true, runValidators: true }
     )
     .populate("userId", "username")
     .populate("category", "name")

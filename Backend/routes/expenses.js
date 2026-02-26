@@ -8,6 +8,8 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+
 /* ================================
    Get expense summary (by category)
    Reflects total approved spending
@@ -54,6 +56,11 @@ router.get('/summary/all', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const { limit = 100, offset = 0 } = req.query;
+    const parsedLimit = Number.parseInt(limit, 10);
+    const parsedOffset = Number.parseInt(offset, 10);
+
+    const safeLimit = Number.isNaN(parsedLimit) ? 100 : Math.min(Math.max(parsedLimit, 0), 200);
+    const safeOffset = Number.isNaN(parsedOffset) ? 0 : Math.max(parsedOffset, 0);
     
     // Logic: Managers see ALL group expenses, Staff see only their OWN
     const query = req.user.role === 'manager'
@@ -62,8 +69,8 @@ router.get('/', async (req, res) => {
 
     const expenses = await Expense.find(query)
       .sort({ date: -1 })
-      .limit(Math.min(parseInt(limit), 200))
-      .skip(parseInt(offset))
+      .limit(safeLimit)
+      .skip(safeOffset)
       .populate('categoryId', 'name')
       .populate('userId', 'username'); // CRITICAL: Populates the name of the person who added it
 
@@ -80,8 +87,17 @@ router.post('/', async (req, res) => {
   try {
     const { categoryId, amount, description, notes, date } = req.body;
 
-    if (!categoryId || amount == null) {
-      return res.status(400).json({ error: 'Category and amount are required' });
+    if (!categoryId || amount == null || !description?.trim()) {
+      return res.status(400).json({ error: 'Category, amount, and description are required' });
+    }
+
+    if (!isValidObjectId(categoryId)) {
+      return res.status(400).json({ error: 'Invalid category ID' });
+    }
+
+    const numericAmount = Number(amount);
+    if (!Number.isFinite(numericAmount) || numericAmount < 0) {
+      return res.status(400).json({ error: 'Amount must be a valid non-negative number' });
     }
 
     const category = await Category.findOne({
@@ -97,8 +113,8 @@ router.post('/', async (req, res) => {
       tenantId: req.user.tenantId, 
       userId: req.user.id, // Linking the current user
       categoryId,
-      amount,
-      description,
+      amount: numericAmount,
+      description: description.trim(),
       notes,
       date: date || new Date()
     });
@@ -122,6 +138,10 @@ router.post('/', async (req, res) => {
 ================================ */
 router.get('/:id', async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid expense ID' });
+    }
+
     const expense = await Expense.findOne({
       _id: req.params.id,
       tenantId: req.user.tenantId
@@ -144,13 +164,35 @@ router.put('/:id', async (req, res) => {
   try {
     const { categoryId, amount, description, notes, date } = req.body;
 
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid expense ID' });
+    }
+
+    if (!categoryId || amount == null || !description?.trim()) {
+      return res.status(400).json({ error: 'Category, amount, and description are required' });
+    }
+
+    if (!isValidObjectId(categoryId)) {
+      return res.status(400).json({ error: 'Invalid category ID' });
+    }
+
+    const numericAmount = Number(amount);
+    if (!Number.isFinite(numericAmount) || numericAmount < 0) {
+      return res.status(400).json({ error: 'Amount must be a valid non-negative number' });
+    }
+
+    const category = await Category.findOne({ _id: categoryId, tenantId: req.user.tenantId });
+    if (!category) {
+      return res.status(400).json({ error: 'Invalid category for your group' });
+    }
+
     const updateQuery = req.user.role === 'manager'
       ? { _id: req.params.id, tenantId: req.user.tenantId }
       : { _id: req.params.id, userId: req.user.id, tenantId: req.user.tenantId };
 
     const expense = await Expense.findOneAndUpdate(
       updateQuery,
-      { categoryId, amount, description, notes, date },
+      { categoryId, amount: numericAmount, description: description.trim(), notes, date },
       { new: true }
     )
     .populate('categoryId', 'name')
@@ -169,6 +211,10 @@ router.put('/:id', async (req, res) => {
 ================================ */
 router.delete('/:id', async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid expense ID' });
+    }
+
     const deleteQuery = req.user.role === 'manager'
       ? { _id: req.params.id, tenantId: req.user.tenantId }
       : { _id: req.params.id, userId: req.user.id, tenantId: req.user.tenantId };

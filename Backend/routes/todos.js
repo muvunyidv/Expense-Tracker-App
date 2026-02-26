@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Todo = require('../models/Todo');
 const auth = require('../middleware/auth');
+
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 // GET all todos
 router.get('/', auth, async (req, res) => {
@@ -19,8 +22,27 @@ router.get('/', auth, async (req, res) => {
 // POST a new todo
 router.post('/', auth, async (req, res) => {
   try {
+    const { task, cost, startDate, endDate } = req.body;
+    const numericCost = Number(cost ?? 0);
+
+    if (!task?.trim()) {
+      return res.status(400).json({ message: "Task is required." });
+    }
+    if (!startDate) {
+      return res.status(400).json({ message: "Start date is required." });
+    }
+    if (!Number.isFinite(numericCost) || numericCost < 0) {
+      return res.status(400).json({ message: "Cost must be a valid non-negative number." });
+    }
+    if (endDate && new Date(endDate) <= new Date(startDate)) {
+      return res.status(400).json({ message: "End date must be later than start date." });
+    }
+
     const newTodo = new Todo({
-      ...req.body,
+      task: task.trim(),
+      cost: numericCost,
+      startDate,
+      endDate: endDate || undefined,
       tenantId: req.user.tenantId,
       // Ensure we use the ID from the auth middleware
       recordedBy: req.user._id || req.user.id 
@@ -37,6 +59,10 @@ router.post('/', auth, async (req, res) => {
 // PATCH status
 router.patch('/:id', auth, async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: "Invalid task ID" });
+    }
+
     const existingTodo = await Todo.findOne({ _id: req.params.id, tenantId: req.user.tenantId });
 
     if (!existingTodo) {
@@ -53,6 +79,10 @@ router.patch('/:id', auth, async (req, res) => {
       return res.status(400).json({ message: "Completed tasks are locked." });
     }
 
+    if (req.body.status && !['pending', 'completed'].includes(req.body.status)) {
+      return res.status(400).json({ message: "Invalid status value." });
+    }
+
     existingTodo.status = req.body.status || existingTodo.status;
     const updated = await existingTodo.save();
     res.json(updated);
@@ -64,6 +94,10 @@ router.patch('/:id', auth, async (req, res) => {
 // DELETE todo
 router.delete('/:id', auth, async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: "Invalid task ID" });
+    }
+
     const todo = await Todo.findOne({ _id: req.params.id, tenantId: req.user.tenantId });
 
     if (!todo) {

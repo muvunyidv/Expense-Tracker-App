@@ -2,14 +2,13 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const authMiddleware = require('../middleware/auth');
-const mongoose = require('mongoose');
 
 const router = express.Router();
 
 // Register
 router.post('/register', async (req, res, next) => {
   try {
-    const { email, phonenumber, username, password, role, inviteCode } = req.body;
+    const { email, phonenumber, username, password, role, inviteCode, accessCode } = req.body;
 
     // Basic validation
     if (!email || !phonenumber || !username || !password) {
@@ -31,9 +30,14 @@ router.post('/register', async (req, res, next) => {
 
     let assignedRole = role || 'user';
     let finalTenantId = undefined;
+    const managerAccessCode = process.env.MANAGER_ACCESS_CODE || 'BOSS2026';
 
     // 2. Role-based logic for Tenant/Silo
-    if (assignedRole === 'staff') {
+    if (assignedRole === 'manager') {
+      if (!accessCode || accessCode.trim() !== managerAccessCode) {
+        return res.status(403).json({ error: 'Invalid Manager Access Code' });
+      }
+    } else if (assignedRole === 'staff') {
       // STAFF: Must provide an invite code to inherit a Manager's Silo
       if (!inviteCode) {
         return res.status(400).json({ error: 'An invite code is required to join a team' });

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card"
 import API from "../api";
 import ExpenseViewModal from "../Components/ExpenseViewModal";
 import { DeleteConfirmModal } from "../Components/DeleteConfirmModal";
+import { getStoredTokenPayload } from "../utils/auth";
 
 export default function TodoPage() {
   // Helper to get today's date in YYYY-MM-DD format
@@ -44,16 +45,9 @@ export default function TodoPage() {
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const payload = JSON.parse(window.atob(base64));
-        setCurrentUserId(payload.id); 
-      } catch (e) {
-        console.error("Token decoding failed", e);
-      }
+    const payload = getStoredTokenPayload();
+    if (payload?.id) {
+      setCurrentUserId(payload.id);
     }
     fetchTodos();
   }, [fetchTodos]);

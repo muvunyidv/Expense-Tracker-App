@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
 import { ChevronDown, ShieldCheck, Users } from "lucide-react"; 
 import AuthBack from "../assets/Auth-Back.jpg";
 import API from "../api";
+
+const MANAGER_ACCESS_CODE = import.meta.env.VITE_MANAGER_ACCESS_CODE || "BOSS2026";
 
 function Auth({ onLogin }) {
   const [isSignup, setIsSignup] = useState(false);
@@ -45,7 +47,7 @@ function Auth({ onLogin }) {
       if (password !== confirmPassword) {
         return setError("Passwords do not match");
       }
-      if (role === "manager" && accessCode !== "BOSS2026") {
+      if (role === "manager" && accessCode !== MANAGER_ACCESS_CODE) {
         return setError("Invalid Manager Access Code");
       }
       if (role === "staff" && !inviteCode) {
@@ -68,6 +70,7 @@ function Auth({ onLogin }) {
           password,
           phonenumber: phonenumber.trim(),
           role: role,
+          accessCode: role === "manager" ? accessCode.trim() : undefined,
           inviteCode: role === "staff" ? inviteCode.trim().toUpperCase() : undefined
         });
 
@@ -158,7 +161,7 @@ function Auth({ onLogin }) {
                         <label className="text-[10px] font-normal uppercase text-orange-600 ml-1 flex items-center gap-1">
                           <ShieldCheck className="w-3 h-3" /> Access Code
                         </label>
-                        <input name="accessCode" type="password" value={formData.accessCode} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-orange-200 bg-orange-50 text-black outline-none focus:ring-2 focus:ring-orange-500 font-normal" placeholder="BOSS2026" />
+                        <input name="accessCode" type="password" value={formData.accessCode} onChange={handleChange} className="w-full mt-1 px-4 py-2.5 rounded-xl border border-orange-200 bg-orange-50 text-black outline-none focus:ring-2 focus:ring-orange-500 font-normal" placeholder={MANAGER_ACCESS_CODE} />
                       </div>
                     )}
 

@@ -23,6 +23,7 @@ import {
 import { AddPlanModal } from "./AddPlanModal";
 import ExpenseViewModal from "../Components/ExpenseViewModal"; 
 import API from "../api";
+import { getStoredTokenPayload } from "../utils/auth";
 
 export function PlanList() {
   const [plans, setPlans] = useState([]);
@@ -90,14 +91,9 @@ export function PlanList() {
   }, [currentFilter]);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        setUserData({ role: payload.role || "staff", id: payload.id });
-      } catch (e) {
-        // Token parse error handling
-      }
+    const payload = getStoredTokenPayload();
+    if (payload) {
+      setUserData({ role: payload.role || "staff", id: payload.id });
     }
     fetchData();
   }, [fetchData]);
