@@ -174,7 +174,7 @@ export function PlanList() {
               key={card.id}
               onClick={() => setCurrentFilter(card.id)}
               className={`p-4 border rounded-2xl flex justify-between items-center transition-all text-left ${
-                isActive ? `bg-white border-zinc-900 shadow-xl ring-1 ring-zinc-900` : "bg-zinc-50 border-transparent hover:bg-zinc-100"
+                isActive ? `bg-white border-orange-300 shadow-xl ring-1 ring-orange-200` : "bg-zinc-50 border-transparent hover:bg-zinc-100"
               }`}
             >
               <div>
@@ -265,7 +265,7 @@ export function PlanList() {
                                 setDecisionMode(plan._id);
                                 setDecisionData({ amount: plan.amount, comment: "" });
                               }}
-                              className="p-3 bg-zinc-900 text-white rounded-xl hover:bg-orange-500 shadow-lg active:scale-90 transition-all"
+                              className="p-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 shadow-lg active:scale-90 transition-all"
                             >
                               <Check className="w-4 h-4" />
                             </button>
@@ -288,7 +288,7 @@ export function PlanList() {
                     )}
 
                     {isEditing && (
-                      <div className="mt-6 p-8 bg-white rounded-[2rem] border-2 border-zinc-900 shadow-2xl animate-in zoom-in-95 duration-200 relative z-10" onClick={(e) => e.stopPropagation()}>
+                      <div className="mt-6 p-8 bg-white rounded-[2rem] border-2 border-orange-200 shadow-2xl animate-in zoom-in-95 duration-200 relative z-10" onClick={(e) => e.stopPropagation()}>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase text-zinc-400 mb-2 block ml-1 tracking-widest">Final Amount (Rwf)</label>
@@ -319,7 +319,7 @@ export function PlanList() {
                         </div>
                         <div className="flex justify-end items-center gap-4 mt-8 pt-6 border-t border-zinc-50">
                           <button onClick={() => setDecisionMode(null)} className="text-[10px] font-black uppercase text-zinc-400 hover:text-red-500 tracking-widest transition-colors">Cancel</button>
-                          <button onClick={() => handleStatusUpdate(plan._id, "approved")} className="px-8 py-4 bg-zinc-900 hover:bg-orange-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl transition-all active:scale-95">Confirm Decision</button>
+                          <button onClick={() => handleStatusUpdate(plan._id, "approved")} className="px-8 py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl transition-all active:scale-95">Confirm Decision</button>
                         </div>
                       </div>
                     )}

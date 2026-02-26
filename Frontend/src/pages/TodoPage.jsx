@@ -3,6 +3,7 @@ import { CheckCircle2, Circle, Calendar, Plus, Trash2, Loader2, ListTodo, AlertC
 import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
 import API from "../api";
 import ExpenseViewModal from "../Components/ExpenseViewModal";
+import { DeleteConfirmModal } from "../Components/DeleteConfirmModal";
 
 export default function TodoPage() {
   // Helper to get today's date in YYYY-MM-DD format
@@ -21,6 +22,7 @@ export default function TodoPage() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTodo, setSelectedTodo] = useState(null);
+  const [todoToDelete, setTodoToDelete] = useState(null);
 
   // Helper to notify Dashboard (Sidebar & Top Widgets) to refresh
   const refreshDashboard = useCallback(() => {
@@ -108,10 +110,10 @@ export default function TodoPage() {
   };
 
   const deleteTodo = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this task?")) return;
     try {
       await API.delete(`/todos/${id}`);
       setTodos(prev => prev.filter(t => t._id !== id));
+      setTodoToDelete(null);
       refreshDashboard();
     } catch (err) {
       alert(err.response?.data?.message || "Delete failed");
@@ -129,6 +131,12 @@ export default function TodoPage() {
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         data={selectedTodo} 
+      />
+      <DeleteConfirmModal
+        isOpen={!!todoToDelete}
+        onClose={() => setTodoToDelete(null)}
+        onConfirm={() => deleteTodo(todoToDelete?._id)}
+        itemName={todoToDelete?.task}
       />
 
       <div className="space-y-6">
@@ -289,7 +297,7 @@ export default function TodoPage() {
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          deleteTodo(todo._id);
+                          setTodoToDelete(todo);
                         }} 
                         className="p-3 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all md:opacity-0 group-hover:opacity-100"
                       >

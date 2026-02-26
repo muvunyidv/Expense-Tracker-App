@@ -42,7 +42,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background font-sans antialiased text-zinc-900">
+    <div className="min-h-screen bg-background font-sans antialiased text-foreground">
       {isAuthenticated ? (
         // Pass the user data to the Dashboard so the Sidebar can use it
         <Dashboard onLogout={handleLogout} user={user} />

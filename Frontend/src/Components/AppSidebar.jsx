@@ -150,7 +150,7 @@ export function AppSidebar({ totals = {}, user = {} }) {
             label: "Rejected Requests",
             value: liveTotals.plansByStatus?.rejected || 0,
             icon: <AlertCircle className="w-4 h-4 text-white" />,
-            color: "bg-zinc-800"
+            color: "bg-red-500"
           };
         } else {
           return {

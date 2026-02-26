@@ -98,7 +98,7 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
 
   return (
     <>
-      <Card className="border-gray-300/60 dark:border-zinc-700/60">
+      <Card className="border-gray-300/60">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <CardTitle>Recent Expenses</CardTitle>
@@ -126,7 +126,7 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
               <p className="text-sm text-muted-foreground font-medium">Fetching expenses...</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-300/60 dark:divide-zinc-700/60">
+            <div className="divide-y divide-gray-300/60">
               {filteredExpenses.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-12 text-center">
                   <div className="bg-muted/50 p-4 rounded-full mb-4">
@@ -141,7 +141,7 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
                 filteredExpenses.map((expense) => (
                   <div 
                     key={expense._id} 
-                    className="flex items-center justify-between py-4 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-zinc-800/20 transition-colors px-2 -mx-2 rounded-lg"
+                    className="flex items-center justify-between py-4 cursor-pointer hover:bg-gray-50/50 transition-colors px-2 -mx-2 rounded-lg"
                     onClick={() => onViewExpense && onViewExpense(expense)}
                   >
                     <div className="flex items-start gap-4">
@@ -185,14 +185,14 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
                       <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => onEditExpense && onEditExpense(expense)}
-                          className="p-2 text-blue-500 bg-blue-50 dark:bg-blue-900/20 rounded-md transition-all hover:scale-105 active:scale-95"
+                          className="p-2 text-blue-500 bg-blue-50 rounded-md transition-all hover:scale-105 active:scale-95"
                           title="Edit"
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => setExpenseToDelete(expense)}
-                          className="p-2 text-red-500 bg-red-50 dark:bg-red-900/20 rounded-md transition-all hover:scale-105 active:scale-95"
+                          className="p-2 text-red-500 bg-red-50 rounded-md transition-all hover:scale-105 active:scale-95"
                           title="Delete"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -205,7 +205,7 @@ export function ExpenseList({ searchQuery = "", onEditExpense, onViewExpense }) 
             </div>
           )}
 
-          <div className="mt-4 pt-4 border-t border-gray-300/60 dark:border-zinc-700/60 flex items-center justify-between">
+          <div className="mt-4 pt-4 border-t border-gray-300/60 flex items-center justify-between">
             <div className="font-semibold text-foreground uppercase text-sm tracking-wider">Total</div>
             <div className="text-xl font-bold text-orange-500">
               {total.toLocaleString()} Rwf

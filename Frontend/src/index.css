@@ -1,43 +1,31 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: hsl(var(--color-background));
-  --color-foreground: hsl(var(--color-foreground));
-  --color-muted: hsl(var(--color-muted));
-  --color-muted-foreground: hsl(var(--color-muted-foreground));
-  --color-border: hsl(var(--color-border));
-  --color-card: hsl(var(--color-card));
-  --color-card-foreground: hsl(var(--color-card-foreground));
-  --color-accent: hsl(var(--color-accent));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-border: hsl(var(--border));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-accent: hsl(var(--accent));
 }
 
 @layer base {
   :root {
     color-scheme: light;
-    /* PURE WHITE THEME */
-    --color-background: 0 0% 100%; 
-    --color-foreground: 210 28% 7%;
-    --color-muted: 210 20% 96%;
-    --color-muted-foreground: 215 15% 40%;
-    --color-border: 210 20% 90%;
-    --color-card: 0 0% 100%; 
-    --color-card-foreground: 210 28% 7%;
-    --color-accent: 28 100% 50%;
+    /* Pure white light theme */
+    --background: 0 0% 100%;
+    --foreground: 210 28% 7%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 15% 40%;
+    --border: 210 20% 90%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 28% 7%;
+    --accent: 28 100% 50%;
   }
 
-  /* Only apply dark variables if the .dark class is explicitly present */
-  .dark {
-    color-scheme: dark;
-    --color-background: 210 28% 7%;
-    --color-foreground: 210 40% 96%;
-    --color-muted: 210 15% 18%;
-    --color-muted-foreground: 215 15% 65%;
-    --color-border: 210 10% 28%;
-    --color-card: 210 18% 12%;
-    --color-card-foreground: 210 40% 96%;
-    --color-accent: 28 100% 59%;
-  }
-
+  html,
   body {
     @apply bg-background text-foreground transition-colors duration-300;
   }

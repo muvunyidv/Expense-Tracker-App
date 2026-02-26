@@ -58,7 +58,7 @@ export function Categories({ onCategoriesChange }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold text-black dark:text-white">Categories</h2>
+          <h2 className="text-2xl font-semibold text-black">Categories</h2>
           <p className="text-muted-foreground mt-1">Manage your expense categories</p>
         </div>
         <button
@@ -91,10 +91,10 @@ export function Categories({ onCategoriesChange }) {
             categories.map((category) => (
               <div
                 key={category._id}
-                className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 flex items-center justify-between hover:shadow-md transition-all group"
+                className="p-4 rounded-lg border border-gray-200 bg-white flex items-center justify-between hover:shadow-md transition-all group"
               >
                 <div className="truncate mr-2">
-                  <span className="font-medium text-gray-900 dark:text-gray-100 block truncate">
+                  <span className="font-medium text-gray-900 block truncate">
                     {category.name}
                   </span>
                   {category.description && (
@@ -106,7 +106,7 @@ export function Categories({ onCategoriesChange }) {
                   {/* EDIT BUTTON */}
                   <button
                     onClick={() => handleOpenEdit(category)}
-                    className="p-2 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+                    className="p-2 rounded-lg text-zinc-500 hover:bg-zinc-100 transition-colors"
                     aria-label="Edit category"
                   >
                     <Pencil className="w-4 h-4 text-blue-500" />
@@ -115,7 +115,7 @@ export function Categories({ onCategoriesChange }) {
                   {/* DELETE BUTTON */}
                   <button
                     onClick={() => handleDeleteCategory(category._id)}
-                    className="p-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
                     aria-label="Delete category"
                   >
                     <Trash2 className="w-4 h-4" />

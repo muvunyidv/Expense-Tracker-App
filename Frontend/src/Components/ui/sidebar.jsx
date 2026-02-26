@@ -145,10 +145,10 @@ export function SidebarMenuButton({
   const classes = [
     "group flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium",
     "transition-all duration-200",
-    "hover:bg-orange-500/10 hover:text-orange-600 dark:hover:bg-orange-500/20 dark:hover:text-orange-400",
+    "hover:bg-orange-500/10 hover:text-orange-600",
     "focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500",
     active
-      ? "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400 ring-1 ring-orange-500/20"
+      ? "bg-orange-50 text-orange-600 ring-1 ring-orange-500/20"
       : "text-sidebar-foreground/70",
     className,
   ]

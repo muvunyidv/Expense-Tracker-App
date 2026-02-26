@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ExpenseList } from "../Components/ExpenseList";
-import { ThemeToggle } from "../Components/ThemeToggle";
 import { AppSidebar, Footer } from "../Components/AppSidebar";
 import { AddExpenseForm } from "../Components/AddExpenseForm";
 import ExpenseViewModal from "../Components/ExpenseViewModal"; 
@@ -32,19 +31,19 @@ function DashboardContent({
         return { 
           label: "Active Pipeline", 
           val: totals.todos?.pipeline || 0, 
-          icon: <Activity className="w-5 h-5 text-white/80" /> 
+          icon: <Activity className="w-5 h-5 text-orange-500" /> 
         };
       case "#plans": 
         return { 
           label: "Total Requested", 
           val: totals.plans || 0, 
-          icon: <ShieldCheck className="w-5 h-5 text-white/80" /> 
+          icon: <ShieldCheck className="w-5 h-5 text-orange-500" /> 
         };
       default: 
         return { 
           label: isPersonalUser ? "Total Spent" : "Team Total", 
           val: totals.summary || 0, 
-          icon: <Wallet className="w-5 h-5 text-white/80" /> 
+          icon: <Wallet className="w-5 h-5 text-orange-500" /> 
         };
     }
   };
@@ -99,18 +98,13 @@ function DashboardContent({
                 </button>
 
                 {isUserMenuOpen && (
-                  <div className="absolute right-0 top-full mt-3 w-64 rounded-xl border border-border shadow-2xl p-2 z-[999] bg-white dark:bg-[#1c1c1c]">
+                  <div className="absolute right-0 top-full mt-3 w-64 rounded-xl border border-zinc-200 shadow-2xl p-2 z-[999] bg-white">
                     <div className="px-4 py-3 border-b border-border/50 mb-1">
                       <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">Account Type</p>
-                      <p className="text-sm font-bold truncate mt-0.5 text-zinc-900 dark:text-white capitalize">{user?.username || 'User'}</p>
+                      <p className="text-sm font-bold truncate mt-0.5 text-zinc-900 capitalize">{user?.username || 'User'}</p>
                       <p className="text-xs text-zinc-500 truncate font-medium">{user?.email}</p>
                     </div>
-                    <div className="flex items-center justify-between px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors cursor-pointer">
-                      <span className="text-sm font-semibold text-zinc-900 dark:text-white">Appearance</span>
-                      <ThemeToggle />
-                    </div>
-                    <div className="h-px bg-border/50 my-1" />
-                    <button onClick={handleLogout} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg">
+                    <button onClick={handleLogout} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 rounded-lg">
                       <LogOut className="w-4 h-4" /> Logout
                     </button>
                   </div>
@@ -200,14 +194,14 @@ function DashboardContent({
       {/* Floating Mobile Widget */}
       {isMobile && !openMobile && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
-          <div className="flex items-center gap-3 px-6 py-3 bg-zinc-900/95 dark:bg-orange-600 text-white rounded-2xl shadow-2xl border border-white/10 backdrop-blur-md">
+          <div className="flex items-center gap-3 px-6 py-3 bg-white text-zinc-900 rounded-2xl shadow-xl border border-zinc-200 backdrop-blur-md">
             {mobileWidget.icon}
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold uppercase tracking-wider opacity-70">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
                 {mobileWidget.label}
               </span>
               <span className="text-base font-black tracking-tight">
-                {mobileWidget.val.toLocaleString()} <span className="text-[10px]">Rwf</span>
+                {mobileWidget.val.toLocaleString()} <span className="text-[10px] text-zinc-500">Rwf</span>
               </span>
             </div>
           </div>

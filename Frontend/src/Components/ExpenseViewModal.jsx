@@ -37,7 +37,7 @@ export default function ExpenseViewModal({ isOpen, onClose, data }) {
   return (
     <>
       <style>{styles}</style>
-      <div className="modal-overlay fixed inset-0 bg-zinc-900/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
+      <div className="modal-overlay fixed inset-0 bg-black/40 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
         <div className="modal-content bg-white text-zinc-900 rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border border-zinc-100">
           
           {/* Header Section */}
@@ -45,7 +45,7 @@ export default function ExpenseViewModal({ isOpen, onClose, data }) {
             {/* Close Button */}
             <button 
               onClick={onClose} 
-              className="absolute top-6 right-6 p-2 bg-white/20 hover:bg-white/30 rounded-full text-white transition-all z-50"
+              className="absolute top-6 right-6 p-2 bg-white/30 hover:bg-white/45 rounded-full text-white transition-all z-50"
             >
               <X className="w-5 h-5" />
             </button>
@@ -127,7 +127,7 @@ export default function ExpenseViewModal({ isOpen, onClose, data }) {
             {/* Action Button */}
             <button 
               onClick={onClose}
-              className="w-full py-4 bg-zinc-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-zinc-800 active:scale-[0.98] transition-all shadow-xl shadow-zinc-200"
+              className="w-full py-4 bg-orange-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-orange-600 active:scale-[0.98] transition-all shadow-xl shadow-orange-500/20"
             >
               Dismiss
             </button>
